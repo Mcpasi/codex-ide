@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.2 - Consistent editor previews and saves
+
+- Keep the streaming preview bound to the first editor request in each model response, matching final dispatch. Additional blocks can no longer close an unsaved new file, rewrite its preview or force it to be animated again before saving. Add delayed-stream reproductions with real temporary-file persistence for repeated same-file blocks, different file targets and a later user turn editing the saved file. Preserve visible animation and paint-before-save checks; advance the PWA shell cache/assets to `codex-ide-v48`.
+
+- Set the npm package and lockfile metadata to `1.3.2`.
+
 ## 1.3.1 - Writable workspaces across platforms
 
 - Fix EACCES on editor saves from system-wide npm installations by storing the active workspace in the current user's persistent data directory. Copy legacy package-local data once without modifying it, make the copy editable, relocate internal absolute symlinks and publish only complete migrations. Keep source-checkout and explicit workspace paths. Cover Linux, Android/Termux, macOS and Windows path selection with native POSIX/Windows path rules; validate Windows AppData fallbacks and preserve directory links as junctions. Add a real read-only-installation reproduction, migration/restart checks, manual HTTP saves and paint-before-save Codex write/edit regressions. Platform-policy simulations do not substitute for native OS testing.

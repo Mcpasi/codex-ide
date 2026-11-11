@@ -1,6 +1,6 @@
 {
   "name": "codex-ide",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "Eigenständige Codex IDE mit lokalem Modell, OpenAI-kompatibler API, Codex Auth-Bridge und integriertem Skill-System.",
   "main": "scripts/codex-ide.js",
   "bin": {

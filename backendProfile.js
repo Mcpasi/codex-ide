@@ -1005,11 +1005,14 @@
     // session. Only newly arrived string characters are decoded on each token.
     var state = streamState || {};
     var previousLength = state.length || 0;
-    var tagMatch = /<codex_ide_editor_request>/ig;
-    tagMatch.lastIndex = Math.max(0, previousLength - '<codex_ide_editor_request>'.length + 1);
     var tag = state.tag || null;
-    var nextTag;
-    while ((nextTag = tagMatch.exec(value))) tag = nextTag;
+    // Preview the same first request that parseEditorRequest will dispatch.
+    // Later blocks in this response must not replace an unsaved live draft.
+    if (!tag) {
+      var tagMatch = /<codex_ide_editor_request>/ig;
+      tagMatch.lastIndex = Math.max(0, previousLength - '<codex_ide_editor_request>'.length + 1);
+      tag = tagMatch.exec(value);
+    }
     state.length = value.length;
     if (!tag) return null;
     if (!state.tag || tag.index !== state.tag.index) {

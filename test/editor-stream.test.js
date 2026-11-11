@@ -104,7 +104,7 @@ describe('editor requests streamed from the backend', () => {
     expect(editor.browser.window.editorStreamUnderTest(prefix + '\\q', '', true, cache)).toBeNull();
   });
 
-  test('cached decoding switches to a later request without retaining the earlier file content', () => {
+  test('cached decoding keeps the first request until a fresh response starts', () => {
     const first = '<codex_ide_editor_request>' + JSON.stringify({ operation: 'write', path: 'one.js', content: 'one' }) + '</codex_ide_editor_request>';
     const second = '<codex_ide_editor_request>' + JSON.stringify({ operation: 'write', path: 'two.js', content: 'two' }) + '</codex_ide_editor_request>';
     const cache = {};
@@ -112,6 +112,8 @@ describe('editor requests streamed from the backend', () => {
       const text = (first + second).slice(0, end);
       expect(editor.browser.window.editorStreamUnderTest(text, '', true, cache)).toEqual(extract(text));
     }
+    expect(editor.browser.window.editorStreamUnderTest(first + second, '', true, cache)).toMatchObject({ path: 'one.js', content: 'one' });
+    expect(editor.browser.window.editorStreamUnderTest(second, '', true, {})).toMatchObject({ path: 'two.js', content: 'two' });
   });
 
   test.each(['write', 'edit'])('dispatches a model %s through the visible editor before touching the real file', async operation => {
@@ -163,6 +165,104 @@ describe('editor requests streamed from the backend', () => {
       editorWorkspaceMode: true
     })).resolves.toMatchObject({ status: 'failed', failureKind: 'editor-channel-unavailable' });
     expect(editor.profile.writeModelHomeWorkspaceFile).not.toHaveBeenCalled();
+  });
+
+  test.each(['new.js', 'other.js'])
+  ('saves the first streamed request once without closing or retyping it when later blocks target %s', async laterPath => {
+    const fixture = createFixture();
+    const backend = editor.browser.window.editorBackendUnderTest;
+    editor.browser.window.codexIdeProfile = backend;
+    backend.set('codex');
+    const first = { operation: 'write', path: 'new.js', content: 'const value = "first 👋";\n' };
+    const later = [
+      { operation: 'write', path: laterPath, content: 'const value = "second";\n' },
+      { operation: 'write', path: laterPath, content: 'const value = "third";\n' }
+    ];
+    const followUp = { operation: 'edit', path: first.path, oldText: 'first', newText: 'next' };
+    const updatedContent = first.content.replace('first', 'next');
+    const changes = [];
+    const textarea = editor.node('ideEditor');
+    const update = textarea.setRangeText.getMockImplementation();
+    textarea.setRangeText.mockImplementation(function (text, start, end, mode) {
+      const removed = this.value.slice(start, end);
+      update.call(this, text, start, end, mode);
+      changes.push({ path: editor.state.path, content: this.value, text, removed });
+    });
+    let turnId = 1;
+    const onEditorDraftDiscard = jest.fn(() => editor.discardModelEditorDraft(turnId));
+    const onEditorWrite = jest.fn((request, options) => editor.applyModelEditorWrite(request, turnId, options));
+    let modelCalls = 0;
+    let saves = 0;
+    function json(data) { return { ok: true, headers: { get: () => 'application/json' }, json: async () => data }; }
+    function stream(parts) {
+      const chunks = parts.map(content => Buffer.from('data: ' + JSON.stringify({ choices: [{ delta: { content } }] }) + '\n\n'));
+      chunks.push(Buffer.from('data: [DONE]\n\n'));
+      return { ok: true, headers: { get: () => 'text/event-stream' }, body: { getReader: () => ({ read: async () => {
+        // Leave time to paint each block: an undelayed mock hides the repeated
+        // closing/retyping that occurs while a real model is still streaming.
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return chunks.length ? { done: false, value: chunks.shift() } : { done: true };
+      } }) } };
+    }
+    editor.browser.context.fetch.mockImplementation(async (url, request) => {
+      const body = JSON.parse(request.body);
+      if (url.endsWith('/codex-ide/ide-files')) {
+        const content = saves ? updatedContent : first.content;
+        expect(body).toMatchObject({ path: first.path, operation: saves ? 'edit' : 'write', content });
+        expect(textarea.value).toBe(content);
+        expect(editor.node('ideHighlightCode').textContent).toBe(content);
+        if (saves) expect(fixture.read(first.path)).toBe(first.content);
+        else expect(fs.existsSync(path.join(fixture.home, first.path))).toBe(false);
+        saves += 1;
+        return json({ ok: true, file: bridge.writeIdeEditorFile(fixture.home, body.path, body.content, body) });
+      }
+      if (!url.endsWith('/v1/chat/completions')) throw new Error('Unexpected request: ' + url);
+      if (body.response_format) return json({ choices: [{ message: { content: '{"complete":true}' } }] });
+      modelCalls += 1;
+      if (modelCalls === 1) return stream([first, ...later].map(change =>
+        '<codex_ide_editor_request>' + JSON.stringify(change) + '</codex_ide_editor_request>'));
+      if (modelCalls === 3) return stream([followUp, { ...followUp, newText: 'ignored' }].map(change =>
+        '<codex_ide_editor_request>' + JSON.stringify(change) + '</codex_ide_editor_request>'));
+      if (modelCalls === 2 || modelCalls === 4) return stream(['<codex_ide_final>Gespeichert.</codex_ide_final>']);
+      throw new Error('Unexpected model retry');
+    });
+    try {
+      const options = {
+        editorWriteMode: true, editorWorkspaceMode: true,
+        onEditorDraft: request => editor.applyModelEditorDraft(request, turnId),
+        onEditorDraftDiscard, onEditorWrite
+      };
+      const pending = backend.apiGenerateReply('Erstelle die neue Datei', options);
+      await jest.runAllTimersAsync();
+      await expect(pending).resolves.toContain('Gespeichert.');
+      expect(fixture.read(first.path)).toBe(first.content);
+      expect(saves).toBe(1);
+      expect(onEditorWrite).toHaveBeenCalledTimes(1);
+      expect(onEditorDraftDiscard).not.toHaveBeenCalled();
+      expect(changes.length).toBeGreaterThan(2);
+      expect(changes.every(change => change.path === first.path && !change.removed && first.content.startsWith(change.content))).toBe(true);
+      expect(changes.map(change => change.text).join('')).toBe(first.content);
+      expect(editor.state.dirty).toBe(false);
+      expect(Object.keys(editor.state.buffers)).toEqual([first.path]);
+
+      // A later user turn edits the saved file with a fresh stream cache and
+      // must retain the visible context instead of replaying the first write.
+      changes.length = 0;
+      editor.state.turnId = ++turnId;
+      const next = backend.apiGenerateReply('Ändere first zu next', {
+        ...options,
+        conversationHistory: [{ user: 'Erstelle die neue Datei', reply: 'Gespeichert.' }]
+      });
+      await jest.runAllTimersAsync();
+      await expect(next).resolves.toContain('Gespeichert.');
+      expect(fixture.read(first.path)).toBe(updatedContent);
+      expect(saves).toBe(2);
+      expect(onEditorWrite).toHaveBeenCalledTimes(2);
+      expect(onEditorDraftDiscard).not.toHaveBeenCalled();
+      expect(changes.length).toBeGreaterThan(2);
+      expect(changes.every(change => change.path === first.path && change.content.startsWith('const value = "') && change.content.endsWith(' 👋";\n'))).toBe(true);
+      expect(editor.state.dirty).toBe(false);
+    } finally { fixture.dispose(); }
   });
 
   test('runs multiple streamed model responses through painting, persistence and the completeness audit', async () => {

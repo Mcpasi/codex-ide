@@ -42,7 +42,7 @@ standardmäßigen Jest-Instrumentierung nicht als Coverage erfasst.
 | `live-editor.test.js` | Lokale Unterschiede in jedem Animationsschritt, alle Editor-Dateitypen, Einzeiler, Unicode, Abbruch, Viewport und Persistenz |
 | `editor-typing.test.js` | Einzelne Tastendrücke und Rückschritte, gleichmäßiges Tempo großer Änderungen, Streaming-Schübe, verzögertes Rendering vor Persistenz, CRLF und sofortiger Abbruch |
 | `editor-diff.test.js` | Getrennte Änderungen, unveränderter Kontext, große Dateien und deterministische Unicode-Eingaben |
-| `editor-stream.test.js` | Späte replaceAll-/Zeilenhinweise, unvollständige Unicode-Escapes und Modell-Requests über den sichtbaren Editor bis zur echten Datei |
+| `editor-stream.test.js` | Späte replaceAll-/Zeilenhinweise, unvollständige Unicode-Escapes und Modell-Requests über den sichtbaren Editor bis zur echten Datei; verzögerte Mehrfachblöcke ohne Schließen oder Neuschreiben vor dem Speichern, auch mit Folgeturn |
 | `editor-permissions.test.js` | Echtes EACCES aus einer schreibgeschuetzten npm-Installation, dauerhafter Nutzer-Workspace, sichere Datenuebernahme und manuelles/Codex-Speichern ueber HTTP nach sichtbarer Editoranimation |
 | `model-home-platform.test.js` | Plattformpfade fuer Linux, Android/Termux, macOS und Windows mit POSIX-/Windows-Pfadregeln; Windows-Fallbacks, UNC-Pfade und Uebernahme von Verzeichnis-Junctions |
 | `chat.test.js` | Sofortiger Nutzerbeitrag, freie Eingabe, Entwurfserhalt, Tastatur/IME, Editoraktionen, Kartenspeicherung, Migration, Neustart, Fehler und Abbruch |
