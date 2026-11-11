@@ -32,6 +32,43 @@ describe('local browser model without model downloads', () => {
     expect(browser.values.get('codexIdeLLMEnabled')).toBe('1');
   });
 
+  test.each(['DOMContentLoaded', 'codex-ide-profile-change'])('keeps a saved disabled model inactive on %s', async event => {
+    browser.values.set('codexIdeChatModel', 'test/saved-model');
+    browser.values.set('codexIdeLLMEnabled', '0');
+    browser.window.codexIdeProfile = { get: () => 'local' };
+    browser.document.readyState = 'complete';
+    browser.nodes.set('customChatModelId', { value: '' });
+    browser.nodes.set('llmEnabledToggle', { checked: true });
+
+    const restore = browser.document.addEventListener.mock.calls.find(([name]) => name === event)[1];
+    restore();
+    await new Promise(resolve => setImmediate(resolve));
+
+    expect(model.isEnabled()).toBe(false);
+    expect(model.getStatus()).toBe('idle');
+    expect(browser.values.get('codexIdeLLMEnabled')).toBe('0');
+    expect(browser.window.TransformersPipeline).not.toHaveBeenCalled();
+    expect(browser.nodes.get('customChatModelId').value).toBe('test/saved-model');
+    expect(browser.nodes.get('llmEnabledToggle').checked).toBe(false);
+    await expect(model.generate('Hallo')).resolves.toBeNull();
+  });
+
+  test('automatically restores a saved enabled model', async () => {
+    browser.values.set('codexIdeChatModel', 'test/saved-model');
+    browser.values.set('codexIdeLLMEnabled', '1');
+    browser.window.codexIdeProfile = { get: () => 'local' };
+    browser.document.readyState = 'complete';
+
+    const restore = browser.document.addEventListener.mock.calls.find(([name]) => name === 'DOMContentLoaded')[1];
+    restore();
+    await new Promise(resolve => setImmediate(resolve));
+
+    expect(model.getStatus()).toBe('ready');
+    expect(model.isEnabled()).toBe(true);
+    expect(browser.window.TransformersPipeline).toHaveBeenCalledWith('text-generation', 'test/saved-model', expect.any(Object));
+    expect(browser.values.get('codexIdeLLMEnabled')).toBe('1');
+  });
+
   test('removes the prompt prefix and model stop tokens from a response', async () => {
     await model.init('test/model');
     await expect(model.generate('Hallo', { conversationHistory: [] })).resolves.toBe('Hallo Welt.');

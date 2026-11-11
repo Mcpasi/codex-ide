@@ -260,6 +260,31 @@ describe('gateway HTTP integration', () => {
     }]);
   });
 
+  test.each([false, true])('delivers completed replies without token deltas over SSE: empty callback=%s', async emitEmptyToken => {
+    const content = 'Prüfung abgeschlossen 👋';
+    runCodex.mockImplementationOnce(async options => {
+      options.onReasoningSummary('Dateien geprüft.', {
+        threadId: 'thread-fallback', turnId: 'turn-fallback', itemId: 'reasoning-fallback', summaryIndex: 0
+      });
+      if (emitEmptyToken) options.onToken('');
+      return { content, threadId: 'thread-fallback', turnId: 'turn-fallback' };
+    });
+
+    const result = await request('/v1/chat/completions', {
+      method: 'POST', body: { stream: true, messages: [{ role: 'user', content: 'Prüfen' }] }
+    });
+    expect(result.status).toBe(200);
+    expect(result.headers['content-type']).toContain('text/event-stream');
+    const events = result.text.split('\n').filter(line => line.startsWith('data: ')).map(line => line.slice(6));
+    expect(events.pop()).toBe('[DONE]');
+    const chunks = events.map(event => JSON.parse(event));
+    expect(chunks.filter(chunk => chunk.error)).toEqual([]);
+    expect(chunks.map(chunk => chunk.choices?.[0]?.delta?.content).filter(Boolean)).toEqual([content]);
+    expect(chunks[chunks.length - 1]).toMatchObject({
+      choices: [{ finish_reason: 'stop' }], codexIde: { threadId: 'thread-fallback', turnId: 'turn-fallback' }
+    });
+  });
+
   test('streams correlated tool cards and reasoning completion through the real HTTP endpoint', async () => {
     const scope = { itemId: 'read-a', threadId: 'thread-a', turnId: 'turn-a', path: 'src/a.js' };
     runCodex.mockImplementationOnce(async options => {

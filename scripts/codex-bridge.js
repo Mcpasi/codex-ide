@@ -2452,6 +2452,7 @@ async function streamChatCompletionFromRequest(req, res, body, options = {}, all
   const id = `codex-ide-codex-${created}`;
   const model = body && body.model ? body.model : 'codex-cli';
   const streamedTerminalItems = new Set();
+  let textStreamed = false;
   const requestAbort = createResponseAbortController(req, res);
   sendSseHeaders(req, res, allowedOrigins);
   writeSseData(res, createChatCompletionChunk(id, created, model, { role: 'assistant' }, null));
@@ -2468,6 +2469,7 @@ async function streamChatCompletionFromRequest(req, res, body, options = {}, all
       signal: requestAbort.signal,
       onToken: token => {
         if (!token || requestAbort.signal.aborted) return;
+        textStreamed = true;
         writeSseData(res, createChatCompletionChunk(id, created, model, { content: token }, null));
       },
       onReasoningSummary: (delta, detail) => {
@@ -2647,8 +2649,8 @@ async function streamChatCompletionFromRequest(req, res, body, options = {}, all
         writeSseData(res, chunk);
       }
     });
-    if (!completion.content) {
-      writeSseData(res, createChatCompletionChunk(id, created, model, { content: '' }, null));
+    if (!textStreamed) {
+      writeSseData(res, createChatCompletionChunk(id, created, model, { content: completion.content || '' }, null));
     }
     const done = createChatCompletionChunk(id, created, model, {}, 'stop');
     if (completion.metadata) done.codexIde = completion.metadata;

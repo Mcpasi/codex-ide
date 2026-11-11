@@ -416,9 +416,12 @@
       // Prefill the input field with the previously used model ID.
       var chatInput = document.getElementById('customChatModelId');
       if (chatInput && !chatInput.value.trim()) chatInput.value = savedModel;
-      initChatModel(savedModel).catch(function (err) {
-        _error('[chatModel] Init error:', err);
-      });
+      // Restoring a saved selection must preserve an explicitly disabled model.
+      if (_llmEnabled) {
+        initChatModel(savedModel).catch(function (err) {
+          _error('[chatModel] Init error:', err);
+        });
+      }
     } else if (_chatStatus === 'idle') {
       // Bug fix: only reset to "Kein Modell geladen" when the status is still
       // idle.  If the user clicked "Modell laden" before this event fired,
