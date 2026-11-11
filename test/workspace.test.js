@@ -82,6 +82,32 @@ describe('workspace file persistence', () => {
     expect(read.bytes).toBe(50);
   });
 
+  describe.each([
+    ['IDE', bridge.readIdeEditorFile],
+    ['extended-file skill', bridge.readExtendedModelFile]
+  ])('%s text reads', (_label, readFile) => {
+    test.each([
+      ['invalid leading byte', [0xff]],
+      ['invalid continuation byte', [0xc3, 0x28]],
+      ['incomplete multibyte character', [0xf0, 0x9f, 0x91]]
+    ])('rejects an %s before exposing lossy editor content', (_kind, suffix) => {
+      const bytes = Buffer.concat([Buffer.from('const value = "'), Buffer.from(suffix)]);
+      fixture.write('encoded.js', bytes);
+
+      expect(() => readFile(fixture.home, 'encoded.js')).toThrow(/UTF-8/);
+      expect(fs.readFileSync(path.join(fixture.home, 'encoded.js'))).toEqual(bytes);
+    });
+
+    test('preserves valid UTF-8, including a BOM and a literal replacement character', () => {
+      const content = '\ufeffconst text = "Grüße 👋 \ufffd";\n';
+      fixture.write('unicode.js', content);
+
+      expect(readFile(fixture.home, 'unicode.js')).toEqual({
+        path: 'unicode.js', content, truncated: false, bytes: Buffer.byteLength(content)
+      });
+    });
+  });
+
   test('creates nested directories idempotently and rejects a file at the target', () => {
     expect(bridge.createExtendedModelDirectory(fixture.home, 'src/components'))
       .toEqual({ path: 'src/components', created: true });

@@ -218,7 +218,7 @@
   ];
 
   // Strip the prompt prefix and cut off at the earliest known stop marker.
-  function extractReply(raw, prompt) {
+  function extractReply(raw, prompt, options) {
     var text = typeof raw === 'string' ? raw : '';
     if (text.indexOf(prompt) === 0) text = text.slice(prompt.length);
     text = text.trim();
@@ -230,8 +230,10 @@
       }
     }
     if (earliest >= 0) text = text.slice(0, earliest).trim();
-    // Preserve Markdown, code indentation and whitespace inside JSON strings.
-    if (text && !/[.!?…]$/.test(text)) text += '.';
+    // Control blocks and JSON must reach their parsers without added prose.
+    var structured = !!(options && options.responseFormat) ||
+      /<codex_ide_(?:thought|final|skill_request|editor_request|workspace_complete)>/i.test(text);
+    if (text && !structured && !/[.!?…]$/.test(text)) text += '.';
     return text || null;
   }
   // ── Public: generate a reply ──────────────────────────────────────────────
@@ -276,7 +278,7 @@
       var output = await chatGenerator(prompt, generationOptions);
       if (opts.signal && opts.signal.aborted) throw createAbortError();
       var raw = (output && output[0] && output[0].generated_text) || '';
-      var reply = extractReply(raw, prompt);
+      var reply = extractReply(raw, prompt, opts);
       // Lokaler Modus: anstößige Inhalte über Safetyfilter.ts entfernen,
       // sofern der externe Filter geladen ist.
       if (reply && typeof window !== 'undefined' &&

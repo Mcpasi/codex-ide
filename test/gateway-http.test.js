@@ -196,6 +196,18 @@ describe('gateway HTTP integration', () => {
     expect(extended.json.files.map(file => file.path)).toContain('.env');
   });
 
+  test('rejects invalid UTF-8 at the editor endpoint without returning replacement text', async () => {
+    const bytes = Buffer.from([0x61, 0xc3, 0x28, 0xff]);
+    fixture.write('encoded.txt', bytes);
+
+    const result = await request('/codex-ide/ide-files?path=encoded.txt', { headers: workspaceHeaders });
+
+    expect(result.status).toBe(400);
+    expect(result.json.error.message).toMatch(/UTF-8/);
+    expect(result.json).not.toHaveProperty('file');
+    expect(fs.readFileSync(path.join(fixture.home, 'encoded.txt'))).toEqual(bytes);
+  });
+
   test('checks the skill ID and the permission for extended-file reads and writes', async () => {
     const route = '/codex-ide/extended-files?path=app.js';
     expect((await request(route)).status).toBe(400);

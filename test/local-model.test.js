@@ -106,6 +106,43 @@ describe('local browser model without model downloads', () => {
     expect(JSON.parse(match[1])).toEqual(request);
   });
 
+  test.each([
+    ['workspace completion', '<codex_ide_workspace_complete>{"complete":true}</codex_ide_workspace_complete>', { editorWorkspaceMode: true }],
+    ['final answer', '<codex_ide_final>Fertig.</codex_ide_final>', { editorWorkspaceMode: true }],
+    ['editor request', '<codex_ide_editor_request>{"operation":"open","path":"app.js"}</codex_ide_editor_request>', { editorWorkspaceMode: true }],
+    ['JSON response', '{"complete":true}', { responseFormat: { type: 'json_object' } }]
+  ])('does not append punctuation to a structured %s', async (_label, reply, options) => {
+    await model.init('test/model');
+    generator.mockImplementationOnce(async prompt => [{ generated_text: prompt + reply + '<|im_end|>' }]);
+    const onToken = jest.fn();
+
+    await expect(model.chatCompletion([{ role: 'user', content: 'Prüfe die Aufgabe' }], 100, { ...options, onToken }))
+      .resolves.toBe(reply);
+    expect(onToken).toHaveBeenCalledWith(reply, reply);
+  });
+
+  test('accepts the local workspace completion marker and proceeds directly to the final pass', async () => {
+    await model.init('test/model');
+    browser.load('backendProfile.js');
+    const profile = browser.window.codexIdeProfile;
+    profile.set('local');
+    const complete = '<codex_ide_workspace_complete>{"complete":true}</codex_ide_workspace_complete>';
+    const final = '<codex_ide_final>Geprüft.</codex_ide_final>';
+    generator
+      .mockImplementation(async () => { throw new Error('Unexpected extra model pass'); })
+      .mockImplementationOnce(async prompt => [{ generated_text: prompt + complete }])
+      .mockImplementationOnce(async prompt => [{ generated_text: prompt + final }]);
+    const onPhase = jest.fn();
+
+    const reply = await profile.apiGenerateReply('Prüfe, ob die Aufgabe erledigt ist', {
+      editorWriteMode: true, editorWorkspaceMode: true, conversationHistory: [], onPhase
+    });
+
+    expect(onPhase.mock.calls.map(([, detail]) => detail.reason)).toEqual(['initial', 'workspace-finalize']);
+    expect(generator).toHaveBeenCalledTimes(2);
+    expect(reply).toBe(final);
+  });
+
   test('keeps a per-call token budget separate from the saved user limit', async () => {
     await model.init('test/model');
     model.setMaxTokens(1024);

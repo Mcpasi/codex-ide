@@ -49,6 +49,19 @@ describe('complete model-home access', () => {
     expect(onRead).toHaveBeenCalledWith(expect.objectContaining({ openInEditor: false }));
   });
 
+  test.each(['inspect', 'edit'])('rejects lossy UTF-8 workspace reads with purpose=%s', purpose => {
+    const bytes = Buffer.from([0x61, 0xc3, 0x28, 0xff]);
+    fixture.write('encoded.txt', bytes);
+    const onRead = jest.fn();
+
+    expect(() => workspace({ operation: 'read', path: 'encoded.txt', purpose }, { onRead }))
+      .toThrow(/UTF-8/);
+    expect(onRead).not.toHaveBeenCalled();
+    expect(workspace({ operation: 'read', path: 'encoded.txt', encoding: 'base64' }).file)
+      .toMatchObject({ content: bytes.toString('base64'), bytes: bytes.length, openInEditor: false });
+    expect(fs.readFileSync(path.join(fixture.home, 'encoded.txt'))).toEqual(bytes);
+  });
+
   test.each(['write', 'edit', 'apply_patch', 'mkdir', 'move', 'remove', 'delete'])('routes %s through the live editor instead of mutating the workspace tool target', operation => {
     fixture.write('src/main.ts', 'original');
     expect(() => workspace({ operation, path: 'src/main.ts', destination: 'moved.ts', content: 'hidden edit' }))

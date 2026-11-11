@@ -9,6 +9,7 @@ const net = require('net');
 const os = require('os');
 const path = require('path');
 const { StringDecoder } = require('string_decoder');
+const { TextDecoder } = require('util');
 const {
   CodexAppServerClient,
   CODEX_IDE_TERMINAL_TOOL_NAME,
@@ -778,17 +779,28 @@ function readIdeEditorFile(homeDir, requestedPath, maxChars = DEFAULT_MAX_MODEL_
   return readEditorTextFile(target, maxChars);
 }
 
+function decodeWorkspaceUtf8(bytes) {
+  try {
+    // Preserve an existing BOM while rejecting bytes that would otherwise
+    // become replacement characters and corrupt the file on its next save.
+    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
+  } catch (_) {
+    throw new Error('Datei enthaelt kein gueltiges UTF-8. Binaerdateien mit encoding=base64 lesen.');
+  }
+}
+
 function readEditorTextFile(target, maxChars) {
   let stat;
   try { stat = fs.statSync(target.resolved); } catch (_) { throw new Error('Datei nicht gefunden'); }
   if (!stat.isFile()) throw new Error('Pfad ist keine Datei');
-  const raw = fs.readFileSync(target.resolved, 'utf8');
+  const bytes = fs.readFileSync(target.resolved);
+  const raw = decodeWorkspaceUtf8(bytes);
   const trimmed = trimContext(raw, maxChars);
   return {
     path: target.relative.replace(/\\/g, '/'),
     content: trimmed.text,
     truncated: trimmed.truncated,
-    bytes: Buffer.byteLength(raw, 'utf8')
+    bytes: bytes.length
   };
 }
 
@@ -915,7 +927,7 @@ function handleWorkspaceToolCall(homeDir, params, callbacks = {}) {
   const encoding = args.encoding === 'base64' ? 'base64' : 'utf8';
   const workspaceFile = {
     path: target.relative.replace(/\\/g, '/'),
-    content: bytes.toString(encoding),
+    content: encoding === 'base64' ? bytes.toString('base64') : decodeWorkspaceUtf8(bytes),
     encoding,
     truncated: false,
     bytes: bytes.length,
