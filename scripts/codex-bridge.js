@@ -1197,6 +1197,8 @@ function runCommand(bin, args, options = {}) {
 
     let stdout = '';
     let stderr = '';
+    const stdoutDecoder = new StringDecoder('utf8');
+    const stderrDecoder = new StringDecoder('utf8');
     let settled = false;
     const timer = setTimeout(() => {
       if (settled) return;
@@ -1205,8 +1207,8 @@ function runCommand(bin, args, options = {}) {
       reject(new Error(`Command Timeout nach ${timeoutMs} ms`));
     }, timeoutMs);
 
-    child.stdout.on('data', chunk => { stdout += chunk.toString('utf8'); });
-    child.stderr.on('data', chunk => { stderr += chunk.toString('utf8'); });
+    child.stdout.on('data', chunk => { stdout += stdoutDecoder.write(chunk); });
+    child.stderr.on('data', chunk => { stderr += stderrDecoder.write(chunk); });
     child.on('error', err => {
       if (settled) return;
       settled = true;
@@ -1217,6 +1219,8 @@ function runCommand(bin, args, options = {}) {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      stdout += stdoutDecoder.end();
+      stderr += stderrDecoder.end();
       resolve({ code, stdout: stdout.trim(), stderr: stderr.trim() });
     });
   });
@@ -1462,6 +1466,8 @@ function runCodexExec({ prompt, model, reasoningEffort, timeoutMs, codexBin, wor
 
     let stdout = '';
     let stderr = '';
+    const stdoutDecoder = new StringDecoder('utf8');
+    const stderrDecoder = new StringDecoder('utf8');
     let settled = false;
     const cleanup = () => {
       clearTimeout(timer);
@@ -1490,8 +1496,8 @@ function runCodexExec({ prompt, model, reasoningEffort, timeoutMs, codexBin, wor
       signal.addEventListener('abort', abortHandler, { once: true });
     }
 
-    child.stdout.on('data', chunk => { stdout += chunk.toString('utf8'); });
-    child.stderr.on('data', chunk => { stderr += chunk.toString('utf8'); });
+    child.stdout.on('data', chunk => { stdout += stdoutDecoder.write(chunk); });
+    child.stderr.on('data', chunk => { stderr += stderrDecoder.write(chunk); });
     child.on('error', err => {
       if (settled) return;
       settled = true;
@@ -1502,6 +1508,8 @@ function runCodexExec({ prompt, model, reasoningEffort, timeoutMs, codexBin, wor
       if (settled) return;
       settled = true;
       cleanup();
+      stdout += stdoutDecoder.end();
+      stderr += stderrDecoder.end();
       if (code !== 0) {
         const detail = (stderr || stdout || '').trim().slice(-1200);
         reject(new Error(`Codex CLI beendet mit Code ${code}. ${detail}`.trim()));
@@ -2452,7 +2460,7 @@ async function streamChatCompletionFromRequest(req, res, body, options = {}, all
   const id = `codex-ide-codex-${created}`;
   const model = body && body.model ? body.model : 'codex-cli';
   const streamedTerminalItems = new Set();
-  let textStreamed = false;
+  const streamedTextChunks = [];
   const requestAbort = createResponseAbortController(req, res);
   sendSseHeaders(req, res, allowedOrigins);
   writeSseData(res, createChatCompletionChunk(id, created, model, { role: 'assistant' }, null));
@@ -2469,7 +2477,7 @@ async function streamChatCompletionFromRequest(req, res, body, options = {}, all
       signal: requestAbort.signal,
       onToken: token => {
         if (!token || requestAbort.signal.aborted) return;
-        textStreamed = true;
+        streamedTextChunks.push(token);
         writeSseData(res, createChatCompletionChunk(id, created, model, { content: token }, null));
       },
       onReasoningSummary: (delta, detail) => {
@@ -2649,8 +2657,12 @@ async function streamChatCompletionFromRequest(req, res, body, options = {}, all
         writeSseData(res, chunk);
       }
     });
-    if (!textStreamed) {
-      writeSseData(res, createChatCompletionChunk(id, created, model, { content: completion.content || '' }, null));
+    const streamedText = streamedTextChunks.join('');
+    const completedText = streamedText ? (completion.content || '').trimStart() : completion.content || '';
+    const streamedPrefix = streamedText.trimStart();
+    if (completedText.startsWith(streamedPrefix)) {
+      const suffix = completedText.slice(streamedPrefix.length);
+      if (suffix) writeSseData(res, createChatCompletionChunk(id, created, model, { content: suffix }, null));
     }
     const done = createChatCompletionChunk(id, created, model, {}, 'stop');
     if (completion.metadata) done.codexIde = completion.metadata;

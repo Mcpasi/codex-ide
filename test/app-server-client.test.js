@@ -178,6 +178,50 @@ describe('persistent App Server JSONL client', () => {
     await expect(client.runTurn({ prompt: 'Hallo' })).resolves.toMatchObject({ content: 'Fertig.', threadId: 'thread-1', turnId: 'turn-1' });
   });
 
+  test('settles completed replies even when the token observer throws', async () => {
+    setup();
+    const onToken = jest.fn(() => { throw new Error('UI callback failed'); });
+
+    await expect(client.runTurn({ prompt: 'Hallo', onToken })).resolves.toMatchObject({ content: 'Fertig.' });
+    expect(onToken).toHaveBeenCalledWith('Fertig.');
+    expect(client.getStatus().activeTurns).toBe(0);
+  });
+
+  test.each([
+    ['completed item', false, false, 'Prüfung ', ''],
+    ['turn snapshot', true, false, 'Prüfung ', ''],
+    ['completed item after a streamed work note', false, true, 'Dateien geprüft.', ''],
+    ['turn snapshot after a streamed work note', true, true, 'Dateien geprüft.', ''],
+    ['turn snapshot after leading whitespace', true, false, '  Prüfung ', '  '],
+    ['turn snapshot after whitespace alone', true, false, '\n  ', '\n  ']
+  ])('retains an unstreamed answer suffix from %s', async (_source, snapshotOnly, workNote, prefix, leading) => {
+    const items = workNote ? [
+      { id: 'work-note', type: 'agentMessage', text: 'Dateien geprüft.' },
+      { id: 'final', type: 'agentMessage', text: 'Alle Tests grün 👋.' }
+    ] : [{ id: 'final', type: 'agentMessage', text: 'Prüfung abgeschlossen 👋.' }];
+    const content = items.map(item => item.text).join('\n');
+    setup((message, transport) => {
+      if (message.method !== 'turn/start') return false;
+      transport.reply({ turn: { id: 'partial-turn' } });
+      setImmediate(() => {
+        const scope = { threadId: 'thread-1', turnId: 'partial-turn' };
+        transport.notify('item/agentMessage/delta', { ...scope, itemId: items[0].id, delta: prefix });
+        if (!snapshotOnly) {
+          for (const item of items) transport.notify('item/completed', { ...scope, item });
+        }
+        transport.notify('turn/completed', { ...scope, turn: {
+          id: scope.turnId, status: 'completed', ...(snapshotOnly ? { items } : {})
+        } });
+      });
+      return true;
+    });
+    const onToken = jest.fn();
+
+    await expect(client.runTurn({ prompt: 'Prüfen', onToken })).resolves.toMatchObject({ content });
+    expect(onToken.mock.calls.map(([delta]) => delta).join('')).toBe(leading + content);
+    expect(onToken.mock.calls[0]).toEqual([prefix]);
+  });
+
   test.each([
     ['completed item notifications', 2, false],
     ['item notifications and turn snapshot', 2, true],

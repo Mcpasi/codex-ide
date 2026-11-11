@@ -337,8 +337,7 @@ class CodexAppServerClient {
     };
 
     let turnId = '';
-    let contentChunks = [];
-    let contentHasNonWhitespace = false;
+    const contentChunks = [];
     const completedAgentItems = [];
     let finalTurn = null;
     const reasoningSummaries = new Map();
@@ -430,7 +429,6 @@ class CodexAppServerClient {
           const delta = typeof params.delta === 'string' ? params.delta : '';
           if (delta) {
             contentChunks.push(delta);
-            if (/\S/.test(delta)) contentHasNonWhitespace = true;
             if (typeof options.onToken === 'function') options.onToken(delta);
           }
           return;
@@ -551,17 +549,22 @@ class CodexAppServerClient {
             reject(new Error('Codex App Server Turn wurde unerwartet unterbrochen'));
             return;
           }
-          if (!contentHasNonWhitespace) {
-            const fallbackContent = extractAgentTextFromTurn(turn) ||
-              extractAgentTextFromTurn({ items: completedAgentItems });
-            contentChunks = fallbackContent ? [fallbackContent] : [];
-          }
+          const completedContent = extractAgentTextFromTurn(turn) ||
+            extractAgentTextFromTurn({ items: completedAgentItems });
+          const content = contentChunks.join('');
+          // Completion may include text that never arrived as deltas. Append
+          // only the missing suffix, including for callers consuming tokens.
+          const streamedPrefix = content.trimStart();
+          const suffix = completedContent.startsWith(streamedPrefix)
+            ? completedContent.slice(streamedPrefix.length) : '';
+          // A failed observer must not leave an already completed turn pending.
           resolve({
-            content: contentChunks.join('').trim(),
+            content: (content + suffix).trim(),
             threadId: session.threadId,
             turnId: turn.id || turnId,
             turn
           });
+          if (suffix && typeof options.onToken === 'function') options.onToken(suffix);
         }
       };
 

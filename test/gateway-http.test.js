@@ -285,6 +285,25 @@ describe('gateway HTTP integration', () => {
     });
   });
 
+  test.each(['', '  '])('delivers an unstreamed answer suffix over SSE without repeating its streamed prefix: leading=%j', async leading => {
+    runCodex.mockImplementationOnce(async options => {
+      options.onToken(leading + 'Prü');
+      options.onToken('fung ');
+      return { content: 'Prüfung abgeschlossen 👋.', threadId: 'partial-thread', turnId: 'partial-turn' };
+    });
+
+    const result = await request('/v1/chat/completions', {
+      method: 'POST', body: { stream: true, messages: [{ role: 'user', content: 'Prüfen' }] }
+    });
+    expect(result.status).toBe(200);
+    const events = result.text.split('\n').filter(line => line.startsWith('data: ')).map(line => line.slice(6));
+    expect(events.pop()).toBe('[DONE]');
+    const chunks = events.map(event => JSON.parse(event));
+    expect(chunks.filter(chunk => chunk.error)).toEqual([]);
+    expect(chunks.map(chunk => chunk.choices?.[0]?.delta?.content).filter(Boolean))
+      .toEqual([leading + 'Prü', 'fung ', 'abgeschlossen 👋.']);
+  });
+
   test('streams correlated tool cards and reasoning completion through the real HTTP endpoint', async () => {
     const scope = { itemId: 'read-a', threadId: 'thread-a', turnId: 'turn-a', path: 'src/a.js' };
     runCodex.mockImplementationOnce(async options => {
