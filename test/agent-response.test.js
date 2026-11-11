@@ -53,7 +53,10 @@ describe('agent response presentation', () => {
 });
 
 describe('streaming agent responses', () => {
-  test.each(['<', '<codex', '<codex_ide_thought', '<codex_ide_editor_request>', '<codex_ide_skill_request>'])
+  test.each([
+    '<', '<codex', '<codex_ide_thought', '<codex_ide_editor_request>', '<codex_ide_skill_request>',
+    '<codex_ide_workspace_c', '<codex_ide_workspace_complete>', '</codex_ide_final>'
+  ])
     ('does not expose incomplete control markup: %s', chunk => {
       expect(response.parseLive(chunk)).toEqual({ thought: '', reply: '' });
     });
@@ -62,6 +65,22 @@ describe('streaming agent responses', () => {
     expect(response.parseLive('<codex_ide_thought>Datei geprüft.</codex_ide_thought><codex_ide_final>Hallo 👋</codex_'))
       .toEqual({ thought: 'Datei geprüft.', reply: 'Hallo 👋' });
   });
+
+  test.each([
+    'Der Vergleich lautet x < 5.',
+    '<main>Grüße 👋</main>',
+    '```html\n<section',
+    'Array<string'
+  ])('preserves ordinary angle brackets in a live final answer: %s', reply => {
+    const raw = '<codex_ide_final>' + reply;
+    expect(response.parseLive(raw)).toEqual({ thought: '', reply });
+    expect(response.parseLive(raw + '</codex_ide_final>')).toEqual({ thought: '', reply });
+  });
+
+  test.each(['<main>Grüße 👋</main>', '<section', '< 5 ist kleiner als 10'])
+    ('streams an untagged answer starting with ordinary angle brackets: %s', reply => {
+      expect(response.parseLive(reply)).toEqual({ thought: '', reply });
+    });
 
   test('keeps a completed final answer stable when more markup follows', () => {
     expect(response.parseLive('<codex_ide_final>Fertig.</codex_ide_final><codex_ide_skill_request>'))

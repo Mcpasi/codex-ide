@@ -284,8 +284,7 @@
     if (window.CodexIdeLocalModel) window.CodexIdeLocalModel.setMaxTokens(byId('llmMaxTokensInput').value);
     try {
       await window.CodexIdeLocalModel.init(byId('customChatModelId').value);
-      window.CodexIdeLocalModel.setEnabled(true);
-      byId('llmEnabledToggle').checked = true;
+      byId('llmEnabledToggle').checked = window.CodexIdeLocalModel.isEnabled();
     } catch (_) { /* the local runtime writes its translated status */ }
   }
 

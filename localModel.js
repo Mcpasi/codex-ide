@@ -15,6 +15,7 @@
   var _chatStatus   = 'idle';   // 'idle' | 'loading' | 'ready' | 'error'
   var _llmEnabled   = false;
   var _loadSeq      = 0;
+  var _enabledChangeSeq = 0;
 
   // ── i18n helper ───────────────────────────────────────────────────────────
   // Reads strings via window.codexIdeT when available, otherwise returns the
@@ -123,6 +124,7 @@
   async function initChatModel(modelId) {
     var id = (typeof modelId === 'string' ? modelId.trim() : '');
     var loadId = ++_loadSeq;
+    var enabledChangeId = _enabledChangeSeq;
  
     if (!id) {
       chatGenerator = null;
@@ -155,9 +157,11 @@
       if (loadId !== _loadSeq) return;
       chatGenerator = generator;
       _chatStatus = 'ready';
-      _llmEnabled = true;
+      // A checkbox change during loading takes precedence over automatic
+      // activation when the download finishes.
+      if (enabledChangeId === _enabledChangeSeq) _llmEnabled = true;
       safeStorageSet(STORAGE_KEY, id);
-      safeStorageSet(ENABLED_KEY, '1');
+      safeStorageSet(ENABLED_KEY, _llmEnabled ? '1' : '0');
       // Populate the input field so the loaded model name is visible.
       setInputValue('customChatModelId', id);
       var readyTpl = t('chatModelReady', 'Bereit ({id})');
@@ -338,6 +342,7 @@
   }
  
   function setLLMEnabled(val) {
+    _enabledChangeSeq += 1;
     var want = !!val;
     var toggle = typeof document !== 'undefined' && document.getElementById('llmEnabledToggle');
     if (want && _chatStatus !== 'ready') {

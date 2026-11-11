@@ -58,17 +58,23 @@
   }
 
   function stripIncompleteTag(text) {
-    return String(text || '').replace(/<[^>]*$/, '');
+    var value = String(text || '');
+    var partial = value.match(/<[^>]*$/);
+    // Ordinary comparisons, generics and HTML are answer content. Only hold
+    // back a suffix that could still become an internal control tag.
+    if (!partial || !startsWithControlMarkup(partial[0])) return value;
+    return value.slice(0, partial.index);
   }
 
   function startsWithControlMarkup(text) {
-    var value = String(text || '').trimStart().toLowerCase();
+    var value = String(text || '').trimStart().toLowerCase().replace(/^<\//, '<');
     if (!value || value.charAt(0) !== '<') return false;
     var tags = [
       '<' + THOUGHT_TAG,
       '<' + FINAL_TAG,
       '<codex_ide_skill_request',
-      '<codex_ide_editor_request'
+      '<codex_ide_editor_request',
+      '<codex_ide_workspace_complete'
     ];
     for (var i = 0; i < tags.length; i++) {
       if (tags[i].indexOf(value) === 0 || value.indexOf(tags[i]) === 0) return true;
@@ -109,7 +115,7 @@
     if (finalOpen !== -1) {
       var finalStart = finalOpen + FINAL_TAG.length + 2;
       finalReply = stripIncompleteTag(raw.slice(finalStart, finalClose === -1 ? raw.length : finalClose));
-    } else if (thoughtOpen === -1 && !startsWithControlMarkup(raw) && raw.trimStart().indexOf('<') !== 0) {
+    } else if (thoughtOpen === -1 && !startsWithControlMarkup(raw)) {
       finalReply = raw;
     }
 

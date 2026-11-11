@@ -183,6 +183,67 @@ describe('local browser model without model downloads', () => {
     expect(generator).toHaveBeenCalledTimes(1);
   });
 
+  test('keeps an explicit disable made during model loading after the download completes', async () => {
+    let finishLoad;
+    browser.window.TransformersPipeline.mockImplementationOnce(() => new Promise(resolve => { finishLoad = resolve; }));
+
+    const loading = model.init('test/model');
+    expect(model.getStatus()).toBe('loading');
+    model.setEnabled(false);
+    expect(browser.values.get('codexIdeLLMEnabled')).toBe('0');
+    finishLoad(generator);
+    await loading;
+
+    expect(model.getStatus()).toBe('ready');
+    expect(model.isEnabled()).toBe(false);
+    expect(browser.values.get('codexIdeLLMEnabled')).toBe('0');
+    await expect(model.generate('Hallo')).resolves.toBeNull();
+    await expect(model.chatCompletion([{ role: 'user', content: 'Hallo' }])).rejects.toThrow(/Modell laden/);
+    expect(generator).not.toHaveBeenCalled();
+
+    model.setEnabled(true);
+    await expect(model.generate('Hallo')).resolves.toBe('Hallo Welt.');
+    expect(generator).toHaveBeenCalledTimes(1);
+  });
+
+  test.each([false, true])('loads through settings while honoring a checkbox disable: %s', async disable => {
+    browser.document.getElementById.mockImplementation(id => {
+      if (!browser.nodes.has(id)) browser.nodes.set(id, {
+        value: '', checked: false, style: {}, options: [],
+        addEventListener: jest.fn(), querySelector: () => null, querySelectorAll: () => [],
+        classList: { add() {}, remove() {}, toggle() {} }, setAttribute() {}, removeAttribute() {}
+      });
+      return browser.nodes.get(id);
+    });
+    browser.load('backendProfile.js');
+    browser.load('codex_ide/settings.js');
+    const initialize = browser.document.addEventListener.mock.calls.filter(([name]) => name === 'DOMContentLoaded').at(-1)[1];
+    await initialize();
+    const node = id => browser.document.getElementById(id);
+    node('customChatModelId').value = 'test/model';
+    node('llmMaxTokensInput').value = '300';
+    let finishLoad;
+    browser.window.TransformersPipeline.mockImplementationOnce(() => new Promise(resolve => { finishLoad = resolve; }));
+    const load = node('reloadChatModelBtn').addEventListener.mock.calls.find(([name]) => name === 'click')[1];
+    const change = node('llmEnabledToggle').addEventListener.mock.calls.find(([name]) => name === 'change')[1];
+
+    const loading = load();
+    expect(model.getStatus()).toBe('loading');
+    if (disable) {
+      node('llmEnabledToggle').checked = false;
+      change.call(node('llmEnabledToggle'));
+    }
+    finishLoad(generator);
+    await loading;
+
+    expect(model.getStatus()).toBe('ready');
+    expect(model.isEnabled()).toBe(!disable);
+    expect(node('llmEnabledToggle').checked).toBe(!disable);
+    expect(browser.values.get('codexIdeLLMEnabled')).toBe(disable ? '0' : '1');
+    await expect(model.generate('Hallo')).resolves.toBe(disable ? null : 'Hallo Welt.');
+    expect(generator).toHaveBeenCalledTimes(disable ? 0 : 1);
+  });
+
   test('shows an error state after a failed load and tolerates blocked browser storage', async () => {
     browser.localStorage.setItem.mockImplementation(() => { throw new Error('storage blocked'); });
     await model.init('test/model');

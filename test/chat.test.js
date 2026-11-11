@@ -42,6 +42,31 @@ describe('chat input and persisted conversation', () => {
     expect(session.history).toEqual([{ user: instruction, reply: 'Geprüft.' }]);
   });
 
+  test.each([
+    ['plain HTML', '<main>Grüße 👋</main>', '<main>Grüße 👋</main>'],
+    ['tagged comparison', '<codex_ide_final>Prüfe x < 5.', 'Prüfe x < 5.']
+  ])('shows %s in the chat before generation completes', async (_label, streamed, reply) => {
+    let callbacks;
+    let finish;
+    editor.node('idePrompt').value = 'Erkläre den Code';
+    editor.profile.apiGenerateReply = jest.fn((_prompt, options) => {
+      callbacks = options;
+      return new Promise(resolve => { finish = resolve; });
+    });
+    const pending = editor.runAgent();
+    try {
+      callbacks.onToken(streamed, streamed);
+      expect(editor.node('ideFinal').textContent).toBe(reply);
+    } finally {
+      finish('<codex_ide_final>' + reply + '</codex_ide_final>');
+      await pending;
+    }
+
+    expect(session.lastTurn.status).toBe('completed');
+    expect(session.lastTurn.reply).toBe(reply);
+    expect(editor.node('ideFinal').textContent).toBe(reply);
+  });
+
   test('archives cards between turns and restores them once with the conversation', async () => {
     const scope = { itemId: 'summary', threadId: 'thread', turnId: 'turn', summaryIndex: 0 };
     editor.profile.apiGenerateReply = jest.fn(async (_prompt, options) => {
