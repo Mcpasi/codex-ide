@@ -64,6 +64,7 @@ function createEditor() {
     window.editorUnderTest = {
       state: state,
       activateBuffer: activateBuffer,
+      saveFile: saveFile,
       bindEvents: bindEvents,
       applyModelEditorDraft: applyModelEditorDraft,
       applyModelEditorWrite: applyModelEditorWrite,

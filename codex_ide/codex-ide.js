@@ -1748,7 +1748,7 @@
         open.appendChild(dirty);
       }
       open.disabled = state.busy || state.fileBusy || state.consoleBusy;
-      open.addEventListener('click', function () { activateBuffer(path, buffer.content, buffer.savedContent, buffer.dirty); });
+      open.addEventListener('click', function () { openFile(path); });
       var close = document.createElement('button');
       close.type = 'button';
       close.className = 'editor-tab-close';
@@ -1990,13 +1990,13 @@
 
   async function openFile(path, force) {
     if ((state.busy || state.fileBusy || state.consoleBusy) && !force) return;
+    if (!state.path && state.dirty && !force && !window.confirm(t('ideDiscardConfirm', 'Ungespeicherte Änderungen verwerfen?'))) return;
     if (state.buffers[path] && !force) {
       var existing = state.buffers[path];
       activateBuffer(path, existing.content, existing.savedContent, existing.dirty);
       setEditorStatus(format('ideOpenedFile', 'Geöffnet: {path}', { path: path }), 'ok');
       return { ok: true, file: { path: path, content: existing.content }, local: true };
     }
-    if (!state.path && state.dirty && !force && !window.confirm(t('ideDiscardConfirm', 'Ungespeicherte Änderungen verwerfen?'))) return;
     setFileBusy(true);
     setEditorStatus(t('ideOpeningFile', 'Datei wird geöffnet …'));
     try {
@@ -2028,7 +2028,6 @@
     var path = byId('idePath').value.trim();
     var content = byId('ideEditor').value;
     if (!path) { setEditorStatus(t('idePathRequired', 'Ein relativer Dateipfad ist erforderlich.'), 'error'); return; }
-    if (!content.length) { setEditorStatus(t('ideContentRequired', 'Leere Dateien werden nicht geschrieben.'), 'error'); return; }
     setFileBusy(true);
     setEditorStatus(t('ideSavingFile', 'Datei wird gespeichert …'));
     try {
