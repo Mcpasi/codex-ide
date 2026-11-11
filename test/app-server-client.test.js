@@ -298,6 +298,50 @@ describe('persistent App Server JSONL client', () => {
     expect(client.stdoutBuffer).toBe('');
   });
 
+  test.each(['close', 'exit', 'error'])('ignores a retired process %s event while the replacement has a pending request', async event => {
+    setup(message => message.method === 'test/restarted');
+    await client.runTurn({ sessionId: 'persistent', prompt: 'First' });
+    const retired = harness.children[0];
+    retired.emit('exit', 17);
+
+    const response = client.request('test/restarted').then(
+      value => ({ value }), error => ({ error: error.message })
+    );
+    const request = await harness.waitForRequest('test/restarted');
+    const replacement = harness.children[1];
+    retired.emit(event, event === 'error' ? new Error('retired process error') : 17);
+    harness.send(replacement, { id: request.id, result: { recovered: true } });
+
+    await expect(response).resolves.toEqual({ value: { recovered: true } });
+    expect(client.getStatus()).toMatchObject({ running: true, initialized: true, pid: replacement.pid });
+    expect(client.getStatus().sessions[0].needsResume).toBe(true);
+    await expect(client.runTurn({ sessionId: 'persistent', prompt: 'Second' }))
+      .resolves.toMatchObject({ content: 'Fertig.', threadId: 'thread-1' });
+    expect(harness.spawnImpl).toHaveBeenCalledTimes(2);
+  });
+
+  test('ignores late pipe data from a retired process after restarting', async () => {
+    setup();
+    await client.initialize();
+    const retired = harness.children[0];
+    retired.emit('exit', 17);
+    await client.initialize();
+    const replacement = harness.children[1];
+    const onNotification = jest.fn();
+    client.notificationHandlers.add(onNotification);
+
+    harness.send(retired, { method: 'account/updated', params: { source: 'retired' } });
+    retired.stdout.emit('data', Buffer.from('{"stale":"'));
+    retired.stdout.emit('data', Buffer.from([0xf0, 0x9f]));
+    retired.stderr.emit('data', Buffer.from('retired process stderr'));
+    harness.send(replacement, { method: 'account/updated', params: { source: 'replacement' } }, true);
+
+    expect(onNotification.mock.calls).toEqual([[{ method: 'account/updated', params: { source: 'replacement' } }]]);
+    expect(client.stdoutBuffer).toBe('');
+    expect(client.getStatus().stderrTail).toBe('');
+    await expect(client.request('model/list')).resolves.toEqual({ ok: true });
+  });
+
   test('restarts with an ephemeral thread when persistence is disabled', async () => {
     setup(undefined, { persistSessions: false });
     await client.runTurn({ sessionId: 'temporary', prompt: 'First' });

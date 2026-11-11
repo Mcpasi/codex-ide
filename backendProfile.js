@@ -1612,6 +1612,8 @@
     var eventParts = [];
     var boundaryTail = '';
     var out = '';
+    var streamComplete = false;
+    var bodyEnded = false;
 
     function appendChunk(chunk) {
       // Search just the new bytes plus the longest possible partial delimiter.
@@ -1624,6 +1626,10 @@
         eventParts.push(source.slice(start, marker.index));
         handleEvent(eventParts.join(''));
         eventParts = [];
+        if (streamComplete) {
+          boundaryTail = '';
+          return;
+        }
         start = marker.index + marker[0].length;
       }
       var tailStart = Math.max(start, source.length - 3);
@@ -1638,7 +1644,10 @@
         if (line.indexOf('data:') !== 0) continue;
         var data = line.slice(5).trim();
         if (!data) continue;
-        if (data === '[DONE]') return;
+        if (data === '[DONE]') {
+          streamComplete = true;
+          return;
+        }
         try {
           var parsed = JSON.parse(data);
           if (parsed && parsed.error) {
@@ -1724,16 +1733,28 @@
       }
     }
 
-    while (true) {
-      var read = await reader.read();
-      if (read.done) break;
-      appendChunk(decoder.decode(read.value, { stream: true }));
+    try {
+      while (!streamComplete) {
+        var read = await reader.read();
+        if (read.done) {
+          bodyEnded = true;
+          break;
+        }
+        appendChunk(decoder.decode(read.value, { stream: true }));
+      }
+      if (!streamComplete) {
+        appendChunk(decoder.decode());
+        eventParts.push(boundaryTail);
+        var buffer = eventParts.join('');
+        if (buffer.trim()) handleEvent(buffer);
+      }
+      return out;
+    } finally {
+      if (!bodyEnded && typeof reader.cancel === 'function') {
+        try { await reader.cancel(); } catch (_) { /* preserve the stream result or error */ }
+      }
+      if (typeof reader.releaseLock === 'function') reader.releaseLock();
     }
-    appendChunk(decoder.decode());
-    eventParts.push(boundaryTail);
-    var buffer = eventParts.join('');
-    if (buffer.trim()) handleEvent(buffer);
-    return out;
   }
 
   async function codexChatCompletion(messages, maxTokens, options) {

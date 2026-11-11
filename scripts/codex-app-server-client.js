@@ -141,22 +141,28 @@ class CodexAppServerClient {
     this.child = child;
 
     if (child.stdout && typeof child.stdout.on === 'function') {
-      child.stdout.on('data', chunk => this._handleStdout(chunk));
+      child.stdout.on('data', chunk => {
+        if (this.child === child) this._handleStdout(chunk);
+      });
     }
     if (child.stderr && typeof child.stderr.on === 'function') {
-      child.stderr.on('data', chunk => this._handleStderr(chunk));
+      child.stderr.on('data', chunk => {
+        if (this.child === child) this._handleStderr(chunk);
+      });
     }
     if (typeof child.on === 'function') {
-      child.on('error', err => this._handleClose(err));
-      child.on('close', code => {
+      // Exit can trigger a restart before the old pipes close. Events from
+      // that retired process must not affect the replacement connection.
+      const handleExit = code => {
+        if (this.child !== child) return;
         const detail = this.stderrTail ? ` ${this.stderrTail.trim().slice(-800)}` : '';
         this._handleClose(new Error(`Codex App Server beendet${code == null ? '' : ` mit Code ${code}`}.${detail}`.trim()));
+      };
+      child.on('error', err => {
+        if (this.child === child) this._handleClose(err);
       });
-      child.on('exit', code => {
-        if (!this.child) return;
-        const detail = this.stderrTail ? ` ${this.stderrTail.trim().slice(-800)}` : '';
-        this._handleClose(new Error(`Codex App Server beendet${code == null ? '' : ` mit Code ${code}`}.${detail}`.trim()));
-      });
+      child.on('close', handleExit);
+      child.on('exit', handleExit);
     }
     return child;
   }

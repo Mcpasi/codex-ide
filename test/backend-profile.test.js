@@ -138,6 +138,59 @@ describe('browser backend profiles', () => {
     await expect(profile.codexChatCompletion([{ role: 'user', content: 'Hallo' }], 100)).rejects.toThrow('stream interrupted');
   });
 
+  test.each(['codex', 'api'])('finishes a %s stream at DONE while the HTTP body remains open', async backend => {
+    profile.set(backend);
+    profile.setApiConfig('https://api.example.test');
+    let controller;
+    const cancel = jest.fn();
+    const body = new ReadableStream({
+      start(value) {
+        controller = value;
+        controller.enqueue(Buffer.from('data: ' + JSON.stringify({ choices: [{ delta: { content: 'Grüße 👋' } }] }) + '\n\ndata: [DONE]\n\n'));
+      },
+      cancel
+    });
+    fetch.mockResolvedValue({ ok: true, headers: { get: () => 'text/event-stream' }, body });
+    let outcome = { pending: true };
+    const completion = profile.apiChatCompletion([{ role: 'user', content: 'Hallo' }], 100, {
+      stream: true, skipModelHomeContext: true
+    }).then(value => { outcome = { value }; }, error => { outcome = { error: error.message }; });
+
+    // Let queued reads and promise callbacks settle without closing the body.
+    await new Promise(resolve => setImmediate(resolve));
+    try {
+      expect(outcome).toEqual({ value: 'Grüße 👋' });
+      expect(cancel).toHaveBeenCalledTimes(1);
+      expect(body.locked).toBe(false);
+    } finally {
+      if (outcome.pending) controller.close();
+      await completion;
+    }
+  });
+
+  test.each([1, 7, 4096])('ignores events after DONE in %s-byte stream reads', async chunkSize => {
+    const onToken = jest.fn();
+    const onToolEvent = jest.fn();
+    const text = 'data: ' + JSON.stringify({ choices: [{ delta: { content: 'Fertig.' } }] }) + '\n\n' +
+      'data: [DONE]\n\n' +
+      'data: ' + JSON.stringify({ choices: [{ delta: { content: 'late text' } }], codexIde: { tool_event: { name: 'late tool' } } }) + '\n\n';
+    const bytes = Buffer.from(text);
+    let offset = 0;
+    fetch.mockResolvedValue({ ok: true, headers: { get: () => 'text/event-stream' }, body: { getReader: () => ({
+      read: async () => {
+        if (offset >= bytes.length) return { done: true };
+        const start = offset;
+        offset += chunkSize;
+        return { done: false, value: bytes.subarray(start, offset) };
+      }
+    }) } });
+
+    await expect(profile.codexChatCompletion([{ role: 'user', content: 'Hallo' }], 100, { onToken, onToolEvent }))
+      .resolves.toBe('Fertig.');
+    expect(onToken.mock.calls).toEqual([['Fertig.', 'Fertig.']]);
+    expect(onToolEvent).not.toHaveBeenCalled();
+  });
+
   test('streams card completion, tool identities, paths and diagnostics without mixing them into the reply', async () => {
     const onReasoningSummary = jest.fn();
     const onToolEvent = jest.fn();
