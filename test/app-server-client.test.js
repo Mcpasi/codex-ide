@@ -178,6 +178,36 @@ describe('persistent App Server JSONL client', () => {
     await expect(client.runTurn({ prompt: 'Hallo' })).resolves.toMatchObject({ content: 'Fertig.', threadId: 'thread-1', turnId: 'turn-1' });
   });
 
+  test.each([
+    ['completed item notifications', 2, false],
+    ['item notifications and turn snapshot', 2, true],
+    ['partial item notifications and turn snapshot', 1, true],
+    ['turn snapshot alone', 0, true]
+  ])('retains every agent message without deltas from %s', async (_source, notificationCount, includeSnapshot) => {
+    const items = [
+      { id: 'commentary', type: 'agentMessage', text: 'Dateien geprüft.' },
+      { id: 'final', type: 'agentMessage', text: 'Beide Fehler behoben 👋.' }
+    ];
+    setup((message, transport) => {
+      if (message.method !== 'turn/start') return false;
+      transport.reply({ turn: { id: 'completed-messages-turn' } });
+      setImmediate(() => {
+        const scope = { threadId: 'thread-1', turnId: 'completed-messages-turn' };
+        for (const item of items.slice(0, notificationCount)) {
+          transport.notify('item/completed', { ...scope, item }, true);
+        }
+        transport.notify('turn/completed', { ...scope, turn: {
+          id: scope.turnId, status: 'completed', ...(includeSnapshot ? { items } : {})
+        } });
+      });
+      return true;
+    });
+
+    await expect(client.runTurn({ prompt: 'Prüfen und beheben' })).resolves.toMatchObject({
+      content: 'Dateien geprüft.\nBeide Fehler behoben 👋.', turnId: 'completed-messages-turn'
+    });
+  });
+
   test('reconciles each native summary part, retaining unstreamed parts and missing final text', async () => {
     const item = { id: 'reasoning-1', type: 'reasoning', summary: [
       { text: 'Ich prüfe die Einfügung.' }, { text: 'Die Löschung passt 👋.' }, 'Abgeschlossen.'

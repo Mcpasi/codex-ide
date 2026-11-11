@@ -10,14 +10,19 @@ function jsonResponse(data, status = 200) {
   };
 }
 
-function streamResponse(events) {
+function streamResponse(events, chunkSize = 1) {
   const text = events.map(event => `data: ${typeof event === 'string' ? event : JSON.stringify(event)}\r\n\r\n`).join('');
   const bytes = Buffer.from(text);
   let index = 0;
   return {
     ok: true, headers: { get: () => 'text/event-stream' },
     body: { getReader: () => ({
-      read: async () => index < bytes.length ? { done: false, value: bytes.subarray(index, ++index) } : { done: true }
+      read: async () => {
+        if (index >= bytes.length) return { done: true };
+        const start = index;
+        index += chunkSize;
+        return { done: false, value: bytes.subarray(start, index) };
+      }
     }) }
   };
 }
@@ -131,6 +136,31 @@ describe('browser backend profiles', () => {
     expect(onToken.mock.calls.map(call => call[0])).toEqual(['Grüße ', '👋']);
     expect(onTerminalOutput).toHaveBeenCalledWith('Prüfung 👋', expect.objectContaining({ item_id: 'console-1' }));
     expect(onReasoningSummary).toHaveBeenCalledWith('Geprüft.', { itemId: 'summary-1', summaryIndex: 0, threadId: 'thread-1', turnId: 'turn-1', replace: true });
+  });
+
+  test.each([
+    ['codex', 1], ['codex', 7], ['codex', 4096],
+    ['api', 1], ['api', 7], ['api', 4096]
+  ])('decodes multiline SSE data in the %s backend with %s-byte reads', async (backend, chunkSize) => {
+    profile.set(backend);
+    profile.setApiConfig('https://api.example.test');
+    const onToken = jest.fn();
+    fetch.mockResolvedValue(streamResponse([
+      '{"choices": [\r\n' +
+        ': heartbeat inside the event\r\n' +
+        'event: message\r\n' +
+        'data: {"delta": {"content": "Grüße 👋"}}\r\n' +
+        'data: ]}',
+      { choices: [{ delta: { content: ' Fertig.' } }] },
+      '[DONE]'
+    ], chunkSize));
+
+    await expect(profile.apiChatCompletion([{ role: 'user', content: 'Hallo' }], 100, {
+      stream: true, skipModelHomeContext: true, onToken
+    })).resolves.toBe('Grüße 👋 Fertig.');
+    expect(onToken.mock.calls).toEqual([
+      ['Grüße 👋', 'Grüße 👋'], [' Fertig.', 'Grüße 👋 Fertig.']
+    ]);
   });
 
   test('surfaces stream errors instead of displaying a successful empty reply', async () => {

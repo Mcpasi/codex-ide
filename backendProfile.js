@@ -1638,98 +1638,97 @@
     }
 
     function handleEvent(rawEvent) {
-      var lines = String(rawEvent || '').split(/\r?\n/);
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        if (line.indexOf('data:') !== 0) continue;
-        var data = line.slice(5).trim();
-        if (!data) continue;
-        if (data === '[DONE]') {
-          streamComplete = true;
-          return;
+      // Multiple data fields form one SSE payload, separated by newlines.
+      var data = String(rawEvent || '').split(/\r?\n/)
+        .filter(function (line) { return line.indexOf('data:') === 0; })
+        .map(function (line) { return line.slice(5).replace(/^ /, ''); })
+        .join('\n').trim();
+      if (!data) return;
+      if (data === '[DONE]') {
+        streamComplete = true;
+        return;
+      }
+      try {
+        var parsed = JSON.parse(data);
+        if (parsed && parsed.error) {
+          throw new Error(parsed.error.message || 'Codex Stream Fehler');
         }
-        try {
-          var parsed = JSON.parse(data);
-          if (parsed && parsed.error) {
-            throw new Error(parsed.error.message || 'Codex Stream Fehler');
-          }
-          var choice = parsed && parsed.choices && parsed.choices[0];
-          var skillEvent = parsed && parsed.codexIde && parsed.codexIde.skill_event;
-          var reasoningSummary = parsed && parsed.codexIde && parsed.codexIde.reasoning_summary;
-          var workspaceFile = parsed && parsed.codexIde && parsed.codexIde.workspace_file;
-          var workspaceIndex = parsed && parsed.codexIde && parsed.codexIde.workspace_index;
-          var terminalEvent = parsed && parsed.codexIde && parsed.codexIde.terminal_event;
-          var toolEvent = parsed && parsed.codexIde && parsed.codexIde.tool_event;
-          var events = eventCallbacks || {};
-          if (parsed && parsed.codexIde && (parsed.codexIde.threadId || parsed.codexIde.thread_id) &&
-              typeof events.onSessionMetadata === 'function') {
-            events.onSessionMetadata({
-              sessionId: String(parsed.codexIde.sessionId || parsed.codexIde.session_id || ''),
-              threadId: String(parsed.codexIde.threadId || parsed.codexIde.thread_id || ''),
-              turnId: String(parsed.codexIde.turnId || parsed.codexIde.turn_id || ''),
-              workspaceToolVersion: Number(parsed.codexIde.workspaceToolVersion) || 0
-            });
-          }
-          if (reasoningSummary && typeof reasoningSummary.delta === 'string' && (reasoningSummary.delta || reasoningSummary.replace === true || reasoningSummary.completed === true) &&
-              typeof events.onReasoningSummary === 'function') {
-            events.onReasoningSummary(reasoningSummary.delta, {
-              itemId: String(reasoningSummary.item_id || ''),
-              threadId: String(reasoningSummary.thread_id || ''),
-              turnId: String(reasoningSummary.turn_id || ''),
-              ...(reasoningSummary.replace === true ? { replace: true } : {}),
-              ...(reasoningSummary.completed === true ? { completed: true } : {}),
-              summaryIndex: Number.isFinite(Number(reasoningSummary.summary_index))
-                ? Number(reasoningSummary.summary_index)
-                : 0
-            });
-          }
-          if (toolEvent && typeof events.onToolEvent === 'function') events.onToolEvent(toolEvent);
-          if (skillEvent && (skillEvent.id === 'codex.web_search' || skillEvent.id === 'workspace.extended-files')) {
-            var skillDetail = {};
-            ['path', 'query', 'error'].forEach(function (field) {
-              if (typeof skillEvent[field] === 'string') skillDetail[field] = skillEvent[field];
-            });
-            if (skillEvent.item_id) skillDetail.itemId = String(skillEvent.item_id);
-            if (skillEvent.thread_id) skillDetail.threadId = String(skillEvent.thread_id);
-            if (skillEvent.turn_id) skillDetail.turnId = String(skillEvent.turn_id);
-            if (/^(list|read|write)$/.test(String(skillEvent.operation || ''))) skillDetail.operation = skillEvent.operation;
-            if (skillEvent.app_server_tool === true) skillDetail.appServerTool = true;
-            if (skillEvent.status === 'running' && typeof events.onSkillStart === 'function') {
-              events.onSkillStart(skillEvent.id, skillDetail);
-            } else if (skillEvent.status === 'completed' && typeof events.onSkillUse === 'function') {
-              events.onSkillUse(skillEvent.id, skillDetail);
-            } else if (skillEvent.status === 'failed' && typeof events.onSkillError === 'function') {
-              events.onSkillError(skillEvent.id, skillDetail);
-            }
-          }
-          if (workspaceFile && typeof workspaceFile.path === 'string' && typeof workspaceFile.content === 'string' &&
-              typeof events.onWorkspaceRead === 'function') {
-            events.onWorkspaceRead(workspaceFile);
-          }
-          if (workspaceIndex && Array.isArray(workspaceIndex.files) && Array.isArray(workspaceIndex.directories) &&
-              typeof events.onWorkspaceList === 'function') {
-            events.onWorkspaceList(workspaceIndex);
-          }
-          if (terminalEvent && terminalEvent.phase === 'start' && typeof events.onTerminalStart === 'function') {
-            events.onTerminalStart(terminalEvent);
-          } else if (terminalEvent && terminalEvent.phase === 'output' && typeof events.onTerminalOutput === 'function') {
-            events.onTerminalOutput(String(terminalEvent.delta || ''), terminalEvent);
-          } else if (terminalEvent && terminalEvent.phase === 'input' && typeof events.onTerminalInput === 'function') {
-            events.onTerminalInput(String(terminalEvent.input || ''), terminalEvent);
-          } else if (terminalEvent && terminalEvent.phase === 'complete' && typeof events.onTerminalComplete === 'function') {
-            events.onTerminalComplete(terminalEvent);
-          }
-          var delta = choice && choice.delta;
-          var token = delta && typeof delta.content === 'string' ? delta.content : '';
-          if (token) {
-            out += token;
-            if (typeof onToken === 'function') {
-              try { onToken(token, out); } catch (_) { /* ignore UI callback errors */ }
-            }
-          }
-        } catch (err) {
-          if (err && err.message) throw err;
+        var choice = parsed && parsed.choices && parsed.choices[0];
+        var skillEvent = parsed && parsed.codexIde && parsed.codexIde.skill_event;
+        var reasoningSummary = parsed && parsed.codexIde && parsed.codexIde.reasoning_summary;
+        var workspaceFile = parsed && parsed.codexIde && parsed.codexIde.workspace_file;
+        var workspaceIndex = parsed && parsed.codexIde && parsed.codexIde.workspace_index;
+        var terminalEvent = parsed && parsed.codexIde && parsed.codexIde.terminal_event;
+        var toolEvent = parsed && parsed.codexIde && parsed.codexIde.tool_event;
+        var events = eventCallbacks || {};
+        if (parsed && parsed.codexIde && (parsed.codexIde.threadId || parsed.codexIde.thread_id) &&
+            typeof events.onSessionMetadata === 'function') {
+          events.onSessionMetadata({
+            sessionId: String(parsed.codexIde.sessionId || parsed.codexIde.session_id || ''),
+            threadId: String(parsed.codexIde.threadId || parsed.codexIde.thread_id || ''),
+            turnId: String(parsed.codexIde.turnId || parsed.codexIde.turn_id || ''),
+            workspaceToolVersion: Number(parsed.codexIde.workspaceToolVersion) || 0
+          });
         }
+        if (reasoningSummary && typeof reasoningSummary.delta === 'string' && (reasoningSummary.delta || reasoningSummary.replace === true || reasoningSummary.completed === true) &&
+            typeof events.onReasoningSummary === 'function') {
+          events.onReasoningSummary(reasoningSummary.delta, {
+            itemId: String(reasoningSummary.item_id || ''),
+            threadId: String(reasoningSummary.thread_id || ''),
+            turnId: String(reasoningSummary.turn_id || ''),
+            ...(reasoningSummary.replace === true ? { replace: true } : {}),
+            ...(reasoningSummary.completed === true ? { completed: true } : {}),
+            summaryIndex: Number.isFinite(Number(reasoningSummary.summary_index))
+              ? Number(reasoningSummary.summary_index)
+              : 0
+          });
+        }
+        if (toolEvent && typeof events.onToolEvent === 'function') events.onToolEvent(toolEvent);
+        if (skillEvent && (skillEvent.id === 'codex.web_search' || skillEvent.id === 'workspace.extended-files')) {
+          var skillDetail = {};
+          ['path', 'query', 'error'].forEach(function (field) {
+            if (typeof skillEvent[field] === 'string') skillDetail[field] = skillEvent[field];
+          });
+          if (skillEvent.item_id) skillDetail.itemId = String(skillEvent.item_id);
+          if (skillEvent.thread_id) skillDetail.threadId = String(skillEvent.thread_id);
+          if (skillEvent.turn_id) skillDetail.turnId = String(skillEvent.turn_id);
+          if (/^(list|read|write)$/.test(String(skillEvent.operation || ''))) skillDetail.operation = skillEvent.operation;
+          if (skillEvent.app_server_tool === true) skillDetail.appServerTool = true;
+          if (skillEvent.status === 'running' && typeof events.onSkillStart === 'function') {
+            events.onSkillStart(skillEvent.id, skillDetail);
+          } else if (skillEvent.status === 'completed' && typeof events.onSkillUse === 'function') {
+            events.onSkillUse(skillEvent.id, skillDetail);
+          } else if (skillEvent.status === 'failed' && typeof events.onSkillError === 'function') {
+            events.onSkillError(skillEvent.id, skillDetail);
+          }
+        }
+        if (workspaceFile && typeof workspaceFile.path === 'string' && typeof workspaceFile.content === 'string' &&
+            typeof events.onWorkspaceRead === 'function') {
+          events.onWorkspaceRead(workspaceFile);
+        }
+        if (workspaceIndex && Array.isArray(workspaceIndex.files) && Array.isArray(workspaceIndex.directories) &&
+            typeof events.onWorkspaceList === 'function') {
+          events.onWorkspaceList(workspaceIndex);
+        }
+        if (terminalEvent && terminalEvent.phase === 'start' && typeof events.onTerminalStart === 'function') {
+          events.onTerminalStart(terminalEvent);
+        } else if (terminalEvent && terminalEvent.phase === 'output' && typeof events.onTerminalOutput === 'function') {
+          events.onTerminalOutput(String(terminalEvent.delta || ''), terminalEvent);
+        } else if (terminalEvent && terminalEvent.phase === 'input' && typeof events.onTerminalInput === 'function') {
+          events.onTerminalInput(String(terminalEvent.input || ''), terminalEvent);
+        } else if (terminalEvent && terminalEvent.phase === 'complete' && typeof events.onTerminalComplete === 'function') {
+          events.onTerminalComplete(terminalEvent);
+        }
+        var delta = choice && choice.delta;
+        var token = delta && typeof delta.content === 'string' ? delta.content : '';
+        if (token) {
+          out += token;
+          if (typeof onToken === 'function') {
+            try { onToken(token, out); } catch (_) { /* ignore UI callback errors */ }
+          }
+        }
+      } catch (err) {
+        if (err && err.message) throw err;
       }
     }
 

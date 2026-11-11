@@ -339,6 +339,7 @@ class CodexAppServerClient {
     let turnId = '';
     let contentChunks = [];
     let contentHasNonWhitespace = false;
+    const completedAgentItems = [];
     let finalTurn = null;
     const reasoningSummaries = new Map();
     const completedSummaries = new Set();
@@ -520,10 +521,7 @@ class CodexAppServerClient {
         if (message.method === 'item/completed' &&
             params.item && params.item.type === 'agentMessage' &&
             typeof params.item.text === 'string') {
-          if (!contentHasNonWhitespace) {
-            contentChunks = [params.item.text];
-            contentHasNonWhitespace = /\S/.test(params.item.text);
-          }
+          completedAgentItems.push(params.item);
           return;
         }
 
@@ -554,7 +552,8 @@ class CodexAppServerClient {
             return;
           }
           if (!contentHasNonWhitespace) {
-            const fallbackContent = extractAgentTextFromTurn(turn);
+            const fallbackContent = extractAgentTextFromTurn(turn) ||
+              extractAgentTextFromTurn({ items: completedAgentItems });
             contentChunks = fallbackContent ? [fallbackContent] : [];
           }
           resolve({
