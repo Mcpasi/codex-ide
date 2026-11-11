@@ -26,13 +26,14 @@
 
   function languageForPath(value) {
     var normalized = String(value || '').trim().toLowerCase().replace(/\\/g, '/');
-    if (LANGUAGE_LABELS[normalized]) return normalized;
+    if (Object.prototype.hasOwnProperty.call(LANGUAGE_LABELS, normalized)) return normalized;
     if (normalized === 'js') return 'javascript';
     if (normalized === 'py') return 'python';
     if (normalized === 'md') return 'markdown';
     if (normalized === 'txt' || normalized === 'plain') return 'text';
     var match = normalized.match(/\.([a-z0-9]+)$/);
-    return match && LANGUAGE_BY_EXTENSION[match[1]] || 'text';
+    return match && Object.prototype.hasOwnProperty.call(LANGUAGE_BY_EXTENSION, match[1])
+      ? LANGUAGE_BY_EXTENSION[match[1]] : 'text';
   }
 
   function highlightWithRules(value, rules) {

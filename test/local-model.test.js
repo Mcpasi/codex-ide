@@ -139,6 +139,34 @@ describe('local browser model without model downloads', () => {
     expect(browser.window.SafetyFilter.filterModelOutput).toHaveBeenCalledWith('Hallo Welt.');
   });
 
+  test.each(['synchronous throw', 'rejected promise'])
+    ('rejects failed chat completions instead of returning an empty reply: %s', async failure => {
+      await model.init('test/model');
+      const error = new Error('Model inference failed');
+      generator.mockImplementation(() => {
+        if (failure === 'synchronous throw') throw error;
+        return Promise.reject(error);
+      });
+      const onToken = jest.fn();
+
+      await expect(model.chatCompletion([{ role: 'user', content: 'Hallo' }], 50, { onToken }))
+        .rejects.toBe(error);
+      expect(onToken).not.toHaveBeenCalled();
+    });
+
+  test('propagates local inference failures through the selected backend while preserving the legacy fallback', async () => {
+    await model.init('test/model');
+    browser.load('backendProfile.js');
+    browser.window.codexIdeProfile.set('local');
+    const error = new Error('Model inference failed');
+    generator.mockRejectedValue(error);
+
+    await expect(model.generate('Hallo', { conversationHistory: [] })).resolves.toBeNull();
+    await expect(browser.window.codexIdeProfile.apiChatCompletion([{ role: 'user', content: 'Hallo' }], 50))
+      .rejects.toBe(error);
+    expect(browser.context.fetch).not.toHaveBeenCalled();
+  });
+
   test('ignores a stale load completing after a newer model was selected', async () => {
     let resolveOld;
     browser.window.TransformersPipeline

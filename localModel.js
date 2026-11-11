@@ -287,12 +287,19 @@
     } catch (err) {
       if (err && err.name === 'AbortError') throw err;
       _warn('[chatModel] Generation error:', err);
-      return null;
+      throw err;
     }
   }
 
   async function generateWithLLM(userText, options) {
-    return generatePrompt(buildPrompt(userText, options || {}), options || {});
+    // Only the legacy generator uses null to request a fallback reply.
+    // Chat completions must reject so the IDE can display the model failure.
+    try {
+      return await generatePrompt(buildPrompt(userText, options || {}), options || {});
+    } catch (err) {
+      if (err && err.name === 'AbortError') throw err;
+      return null;
+    }
   }
 
   async function chatCompletion(messages, maxTokens, options) {

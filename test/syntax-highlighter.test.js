@@ -16,6 +16,19 @@ describe('editor syntax highlighting', () => {
     expect(highlighter.languageForPath(file)).toBe(language);
   });
 
+  test.each(['__proto__', 'constructor', 'notes.__proto__', 'notes.constructor'])
+    ('treats inherited object keys in %s as plain text paths', file => {
+      const source = '<script>Grüße 👋 & text</script>';
+      const highlighted = highlighter.highlight(source, file);
+
+      expect(highlighter.languageForPath(file)).toBe('text');
+      expect(highlighted).toEqual({
+        language: 'text', label: 'Text',
+        html: '&lt;script&gt;Grüße 👋 &amp; text&lt;/script&gt;'
+      });
+      expect(renderedText(highlighted.html)).toBe(source);
+    });
+
   test.each([
     ['app.js', 'const greeting = "Grüße 👋";\n// <script> & text\nconsole.log(greeting);', 'keyword'],
     ['app.py', '@decorator\ndef greet():\n    return "Grüße 👋" # <tag>\n', 'keyword'],
