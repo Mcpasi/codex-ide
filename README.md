@@ -80,7 +80,7 @@ The gateway binds to loopback by default and rejects foreign browser hostnames w
 
 `codex_ide_terminal` runs verification commands against a disposable workspace copy. Caches and build output are allowed in that copy and never update the actual project. In model turns, the App Server command sandbox restricts writes to the verification root and disables command network access. There is no fallback to an unrestricted model shell. The console needs no C compiler, introduces no runtime/output limit, and reports real execution failures without a gateway-version preflight. Workspace memory requests also use the live editor instead of silently saving before the model turn. Optional memory read errors do not stop workspace work.
 
-Existing threads with older tool schemas are renewed from the supplied conversation. PWA cache v46 delivers the chat cards and current editor contract through the existing update flow. Requests retain no default timeout, action, retry or output cap. User Stop still cancels work. Static files remain inside the application-shell root, and the uncached HTML preview runs in a CSP sandbox without access to the IDE origin. Codex CLI browser credentials are neither requested nor stored.
+Existing threads with older tool schemas are renewed from the supplied conversation. PWA cache v47 delivers the chat cards and current editor contract through the existing update flow. Requests retain no default timeout, action, retry or output cap. User Stop still cancels work. Static files remain inside the application-shell root, and the uncached HTML preview runs in a CSP sandbox without access to the IDE origin. Codex CLI browser credentials are neither requested nor stored.
 
 App Server JSONL and console streams use stateful UTF-8 decoders, so an umlaut or emoji split between chunks cannot corrupt an active turn. A restarted App Server discards incomplete bytes and lines from the old process. Long response and console deltas are accumulated linearly; the browser appends only new output and completion does not retransmit an aggregate that was already streamed.
 
@@ -88,7 +88,18 @@ The separate user console is controlled only by the locally intercepted `/consol
 
 ## npm updates
 
-`model-home` always remains fixed at `<project>/model-home`; installation and updates never configure another workspace location. A globally installed interactive `codex-ide start` checks for a newer stable npm version by reading the npm `latest` dist-tag directly and waits up to 20 seconds for slower registries. Use `--no-update-check` or `CODEX_IDE_NO_UPDATE_CHECK=1` to skip that check.
+Source checkouts use `<project>/model-home`. npm installations use a persistent workspace owned by the current user:
+
+| Gateway platform | Default workspace |
+| --- | --- |
+| Linux | `$XDG_DATA_HOME/codex-ide/model-home`, otherwise `~/.local/share/codex-ide/model-home` |
+| Android with Termux | `$HOME/.local/share/codex-ide/model-home` in the Termux home; an absolute `XDG_DATA_HOME` overrides the data directory |
+| macOS | `~/Library/Application Support/codex-ide/model-home` |
+| Windows | `%LOCALAPPDATA%/codex-ide/model-home`; fallback to absolute `%APPDATA%`, then `<user home>/AppData/Local` |
+
+These paths refer to the device running the gateway. A browser on another device uses that gateway's workspace. On first use, existing package-local workspace data is copied there without modifying the original. Read-only package files become editable in the copy; internal symlinks stay inside the new workspace. Windows directory links are recreated as junctions with absolute targets inside the new workspace. Later starts keep the user's current files. Explicit `CODEX_IDE_MODEL_HOME` and legacy bridge path overrides retain their configured paths. The gateway prints the active model-home path at startup.
+
+A globally installed interactive `codex-ide start` checks for a newer stable npm version by reading the npm `latest` dist-tag directly and waits up to 20 seconds for slower registries. Use `--no-update-check` or `CODEX_IDE_NO_UPDATE_CHECK=1` to skip that check.
 
 ```bash
 codex-ide version
@@ -96,7 +107,7 @@ codex-ide update
 codex-ide update --yes
 ```
 
-Before npm replaces the package, `codex-ide update` copies `model-home` into a neutrally named temporary backup and verifies it with SHA-256. After either a successful npm update or an npm failure, the updater restores the workspace at the exact same project path and verifies it again. The temporary backup is removed only after verification succeeds. Self-update is intentionally restricted to a global npm installation and never overwrites a local source checkout. Keep `.gitkeep` and `.npmignore` during manual `model-home` cleanup; the nested ignore file prevents any other workspace content from entering the package and is not published itself.
+The active user workspace lives outside the npm package and survives package replacement. Before npm replaces the package, `codex-ide update` also copies the legacy package-local `model-home` into a neutrally named temporary backup and verifies it with SHA-256. After either a successful npm update or an npm failure, the updater restores that legacy directory at the exact same project path and verifies it again. The temporary backup is removed only after verification succeeds. Self-update is intentionally restricted to a global npm installation and never overwrites a local source checkout. Keep `.gitkeep` and `.npmignore` during manual package-local `model-home` cleanup; the nested ignore file prevents any other workspace content from entering the package and is not published itself.
 
 ## More commands
 

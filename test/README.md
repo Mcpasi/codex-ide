@@ -43,6 +43,8 @@ standardmäßigen Jest-Instrumentierung nicht als Coverage erfasst.
 | `editor-typing.test.js` | Einzelne Tastendrücke und Rückschritte, gleichmäßiges Tempo großer Änderungen, Streaming-Schübe, verzögertes Rendering vor Persistenz, CRLF und sofortiger Abbruch |
 | `editor-diff.test.js` | Getrennte Änderungen, unveränderter Kontext, große Dateien und deterministische Unicode-Eingaben |
 | `editor-stream.test.js` | Späte replaceAll-/Zeilenhinweise, unvollständige Unicode-Escapes und Modell-Requests über den sichtbaren Editor bis zur echten Datei |
+| `editor-permissions.test.js` | Echtes EACCES aus einer schreibgeschuetzten npm-Installation, dauerhafter Nutzer-Workspace, sichere Datenuebernahme und manuelles/Codex-Speichern ueber HTTP nach sichtbarer Editoranimation |
+| `model-home-platform.test.js` | Plattformpfade fuer Linux, Android/Termux, macOS und Windows mit POSIX-/Windows-Pfadregeln; Windows-Fallbacks, UNC-Pfade und Uebernahme von Verzeichnis-Junctions |
 | `chat.test.js` | Sofortiger Nutzerbeitrag, freie Eingabe, Entwurfserhalt, Tastatur/IME, Editoraktionen, Kartenspeicherung, Migration, Neustart, Fehler und Abbruch |
 | `chat-browser.test.js` | Echte Chromium-Darstellung von Chat, aufklappbaren Denk-/Toolkarten, Konsole, Verlauf, wachsender Eingabe und Scrollverhalten auf Desktop und schmalen Ansichten |
 | `agent-activity.test.js` | Native Denkkarten ohne synthetische Duplikate, stabile DOM-Knoten und Aufklappzustände, Mehrteiligkeit, parallele Werkzeuge und Recovery-Identität |
@@ -64,6 +66,14 @@ unter dem temporären Systempfad, die nach den Tests entfernt werden. Das echte
 werden simuliert; gezielte Konsolentests starten lokale Node-Prozesse in temporaeren Workspaces; die Suite benötigt weder Anmeldedaten noch
 externe Dienste oder Modelldownloads. Die HTTP-Integrationstests öffnen kurz
 einen zufällig vergebenen Port auf `127.0.0.1`; die Laufumgebung muss das erlauben.
+
+Die Plattformtests verwenden `path.posix` und `path.win32` mit simulierten
+Plattformwerten. Sie ersetzen keinen nativen Lauf auf Android, Windows oder
+macOS. Die Junction-Migration wird mit der Windows-Policy auf dem Dateisystem
+des Testhosts geprueft. Das echte Unix-EACCES wird unter Windows und bei Root
+uebersprungen. Der Dateisymlink-Migrationstest wird unter Windows wegen der
+zusaetzlichen Symlink-Rechte uebersprungen; Verzeichnislinks verwenden dort
+Junctions.
 
 Die Scroll-Regression startet einen isolierten Headless-Chromium, wenn
 `chromium`, `chromium-browser` oder `google-chrome` im PATH vorhanden ist.

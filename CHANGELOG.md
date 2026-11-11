@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1 - Writable workspaces across platforms
+
+- Fix EACCES on editor saves from system-wide npm installations by storing the active workspace in the current user's persistent data directory. Copy legacy package-local data once without modifying it, make the copy editable, relocate internal absolute symlinks and publish only complete migrations. Keep source-checkout and explicit workspace paths. Cover Linux, Android/Termux, macOS and Windows path selection with native POSIX/Windows path rules; validate Windows AppData fallbacks and preserve directory links as junctions. Add a real read-only-installation reproduction, migration/restart checks, manual HTTP saves and paint-before-save Codex write/edit regressions. Platform-policy simulations do not substitute for native OS testing.
+
+- Set the npm package and lockfile metadata to `1.3.1` and advance the PWA shell cache and all versioned shell assets to `codex-ide-v47`.
+
 ## 1.3.0 - Live editing, chat activity and streaming performance
 
 - Move accepted user messages into the chat immediately and clear the composer before generation. Preserve drafts written during a turn, grow the input with its content, and retain Enter/Shift+Enter and IME behavior. Render native App Server summaries, workspace access, editor actions, console checks and native tools as accessible disclosure cards with stable identities, status, targets, results and errors. Persist cards with each turn, restore interrupted work without running indicators, and follow new output only when the reader is at the bottom. Add chat, transport, persistence and real Chromium regressions for desktop and narrow layouts. Keep all project writes exclusive to the live editor.

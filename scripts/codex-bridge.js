@@ -16,6 +16,7 @@ const {
   CODEX_IDE_WORKSPACE_TOOL_NAME
 } = require('./codex-app-server-client');
 const { MODEL_HOME_TOOL_VERSION, modelHomeConfigArgs } = require('./codex-workspace-policy');
+const { getModelHomeDir } = require('./codex-model-home');
 
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 8787;
@@ -24,8 +25,6 @@ const DEFAULT_SSE_HEARTBEAT_MS = 15000;
 const DEFAULT_MAX_PROMPT_CHARS = 24000;
 const DEFAULT_CODEX_ENGINE = 'app-server';
 const PROJECT_ROOT = path.resolve(__dirname, '..');
-const DEFAULT_MODEL_HOME = path.join(PROJECT_ROOT, 'model-home');
-const DEFAULT_WORKDIR = DEFAULT_MODEL_HOME;
 const MEMORY_FILE_NAME = 'memory.md';
 const DEFAULT_MAX_FILE_CONTEXT_CHARS = 12000;
 const DEFAULT_MAX_MODEL_FILE_WRITE_CHARS = Number.POSITIVE_INFINITY;
@@ -273,21 +272,11 @@ function ensureModelHome(homeDir) {
   return homeDir;
 }
 
-function getModelHomeDir(options = {}) {
-  const raw = options.modelHome ||
-    options.workdir ||
-    process.env.CODEX_IDE_MODEL_HOME ||
-    process.env.CODEX_BRIDGE_MODEL_HOME ||
-    process.env.CODEX_BRIDGE_WORKDIR ||
-    DEFAULT_MODEL_HOME;
-  return path.resolve(String(raw || DEFAULT_MODEL_HOME));
-}
-
 function getMemoryFilePath(homeDir) {
   return path.join(homeDir, MEMORY_FILE_NAME);
 }
 
-function formatDisplayPath(filePath, homeDir = DEFAULT_MODEL_HOME) {
+function formatDisplayPath(filePath, homeDir = getModelHomeDir()) {
   const resolved = path.resolve(filePath);
   const root = path.resolve(homeDir);
   const relative = path.relative(root, resolved).replace(/\\/g, '/');
@@ -2838,6 +2827,8 @@ function serveIdePreview(req, res, url, options = {}) {
 }
 
 function createServer(options = {}) {
+  // Every editor, preview, console and model request uses the same resolved root.
+  options = { ...options, modelHome: getModelHomeDir(options) };
   const allowedOrigins = options.allowedOrigins ||
     parseAllowedOrigins(process.env.CODEX_BRIDGE_ALLOWED_ORIGINS);
   let activeUserConsole = null;

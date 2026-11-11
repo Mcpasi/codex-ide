@@ -86,7 +86,9 @@ Das Paket `codex-ide` installiert ueber den `bin`-Eintrag den globalen Befehl `c
 
 `codex-ide version` liest die installierte semantische Paketversion. `codex-ide update` fragt npm direkt nach dem stabilen `latest`-Dist-Tag, toleriert langsamere Registry-Antworten bis 20 Sekunden und verlangt vor dem Download eine interaktive Bestaetigung; `--yes` bestaetigt nichtinteraktiv. Ein interaktiver global installierter `codex-ide start` bietet eine neuere Version vor dem Gatewaystart ebenfalls an. `--no-update-check` oder `CODEX_IDE_NO_UPDATE_CHECK=1` ueberspringt nur diese automatische Pruefung.
 
-Der einzige dauerhafte Workspace bleibt `<projekt>/model-home`. Das Selbstupdate ist nur zulaessig, wenn die laufende CLI exakt aus dem von `npm root --global` gemeldeten Paketpfad stammt. Vor `npm install --global codex-ide@<version>` wird der Workspace-Inhalt in ein neutral benanntes temporaeres Verzeichnis kopiert und per SHA-256 ueber Dateien, Verzeichnisse und Symlinkziele verifiziert. Danach wird ausschließlich `<projekt>/model-home` aus dieser Sicherung rekonstruiert und erneut geprueft. Das gilt auch bei einem npm-Fehler. Erst nach bestaetigter Wiederherstellung wird die temporaere Sicherung entfernt; bei einem Wiederherstellungsfehler bleibt sie mit einem ausgegebenen Recovery-Pfad erhalten. Weder Update noch Installation legen ein zweites `model-home` an oder aendern die vorhandene Workspace-, Editor-, Skill- oder Sandboxarchitektur.
+Quellkopien behalten `<projekt>/model-home`. npm-Installationen speichern den aktiven Workspace im Datenverzeichnis des aktuellen Nutzers, außerhalb des Pakets. Vorhandene paketlokale Dateien werden beim ersten Start ueber eine temporaere Kopie uebernommen; die Originale bleiben erhalten. Kopierte Dateien und Ordner erhalten Schreibrechte fuer ihren Besitzer, interne absolute Symlinks werden auf den neuen Workspace umgestellt. Ein vorhandener Nutzer-Workspace wird bei spaeteren Starts beibehalten. Explizite Modell-Home-Konfigurationen behalten ihren Pfad.
+
+Das Selbstupdate ist nur zulaessig, wenn die laufende CLI exakt aus dem von `npm root --global` gemeldeten Paketpfad stammt. Der aktive Nutzer-Workspace uebersteht den Paketwechsel außerhalb des npm-Verzeichnisses. Vor `npm install --global codex-ide@<version>` wird zusaetzlich das alte paketlokale `model-home` in ein neutral benanntes temporaeres Verzeichnis kopiert und per SHA-256 ueber Dateien, Verzeichnisse und Symlinkziele verifiziert. Danach wird dieses Altverzeichnis aus der Sicherung am selben Projektpfad rekonstruiert und erneut geprueft, auch bei einem npm-Fehler. Erst nach bestaetigter Wiederherstellung wird die temporaere Sicherung entfernt; bei einem Wiederherstellungsfehler bleibt sie mit einem ausgegebenen Recovery-Pfad erhalten.
 
 ## Sprache
 
@@ -94,11 +96,13 @@ Deutsch, Englisch und Franzoesisch lassen sich direkt in der Kopfzeile ueber Fla
 
 ## Workspace und Editor
 
-Der Workspace liegt in:
+Bei Quellkopien liegt der Workspace in:
 
 ```text
 <projekt>/model-home
 ```
+
+npm-Installationen verwenden unter Linux/Termux `$XDG_DATA_HOME/codex-ide/model-home` oder `~/.local/share/codex-ide/model-home`, unter macOS `~/Library/Application Support/codex-ide/model-home` und unter Windows `%LOCALAPPDATA%/codex-ide/model-home`. Das Gateway zeigt den aktiven Pfad beim Start an und verwendet ihn einheitlich fuer Lesen, Vorschau, Nutzerkonsole und Editor-Persistenz.
 
 Die IDE bietet:
 
@@ -232,7 +236,7 @@ Alle API-Antworten sind `no-store`. Ohne explizite Origin-Allowlist akzeptiert d
 
 ## PWA
 
-`sw.js` cached die Standalone-App-Shell unter `codex-ide-v46`. Gateway-Routen umgehen den Cache. Die Worker-Pruefung verwendet `updateViaCache: none`; bei einem Update bleibt der neue Worker wartend, bis der Nutzer die Installation bestaetigt. Danach werden die Shell-Dateien mit `cache: reload` geladen und die Seite beim Controller-Wechsel einmal neu geladen. Ein noch mit altem JavaScript laufender Client ohne diesen Listener wird vom neuen Worker nach der bestaetigten Aktivierung einmal selbst neu navigiert. `codex-ide clean` oeffnet eine Bereinigungs-URL, die Worker abmeldet und Cache Storage leert, ohne Browser-Einstellungen, Skill-Zustand oder Workspace-Daten zu loeschen. Der PWA-Download und das npm-Paketupdate bleiben getrennte, jeweils bestaetigte Vorgaenge: npm ersetzt die installierten Quelldateien, der Service Worker aktiviert danach die neu ausgelieferte Browser-Shell.
+`sw.js` cached die Standalone-App-Shell unter `codex-ide-v47`. Gateway-Routen umgehen den Cache. Die Worker-Pruefung verwendet `updateViaCache: none`; bei einem Update bleibt der neue Worker wartend, bis der Nutzer die Installation bestaetigt. Danach werden die Shell-Dateien mit `cache: reload` geladen und die Seite beim Controller-Wechsel einmal neu geladen. Ein noch mit altem JavaScript laufender Client ohne diesen Listener wird vom neuen Worker nach der bestaetigten Aktivierung einmal selbst neu navigiert. `codex-ide clean` oeffnet eine Bereinigungs-URL, die Worker abmeldet und Cache Storage leert, ohne Browser-Einstellungen, Skill-Zustand oder Workspace-Daten zu loeschen. Der PWA-Download und das npm-Paketupdate bleiben getrennte, jeweils bestaetigte Vorgaenge: npm ersetzt die installierten Quelldateien, der Service Worker aktiviert danach die neu ausgelieferte Browser-Shell.
 
 ## Tests
 
