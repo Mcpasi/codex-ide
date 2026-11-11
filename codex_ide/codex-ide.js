@@ -3534,7 +3534,7 @@
     byId('ideEditor').addEventListener('scroll', syncEditorScroll);
     byId('ideEditor').addEventListener('keydown', function (event) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); saveFile(); return; }
-      if (event.key !== 'Tab') return;
+      if (event.key !== 'Tab' || this.readOnly || this.disabled) return;
       event.preventDefault();
       var start = this.selectionStart; var end = this.selectionEnd;
       this.setRangeText('  ', start, end, 'end');

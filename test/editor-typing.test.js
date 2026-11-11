@@ -26,6 +26,48 @@ describe('keyboard-like live editing', () => {
     return changes;
   }
 
+  test.each(['write', 'edit'])('Tab during a live %s preserves the read-only buffer and lets it save', async operation => {
+    editor.browser.context.Event = Event;
+    editor.activateBuffer('app.js', 'b', 'b', false);
+    editor.setBusy(true);
+    const request = operation === 'write'
+      ? { operation, path: 'new.js', content: 'a' }
+      : { operation, path: 'app.js', oldText: 'b', newText: 'a' };
+    const pending = editor.applyModelEditorWrite(request, 1, { persist: true });
+    const outcome = pending.then(result => ({ result }), error => ({ error }));
+
+    // Press Tab after the final syntax paint, before the save starts.
+    await jest.advanceTimersByTimeAsync(operation === 'write' ? 17 : 34);
+    expect(textarea.readOnly).toBe(true);
+    expect(textarea.value).toBe('a');
+    expect(editor.node('ideHighlightCode').textContent).toBe('a');
+    expect(editor.profile.writeModelHomeWorkspaceFile).not.toHaveBeenCalled();
+    textarea.dispatchEvent({ type: 'keydown', key: 'Tab', preventDefault: jest.fn() });
+    const contentAfterTab = textarea.value;
+
+    await jest.runAllTimersAsync();
+    const settled = await outcome;
+    expect(contentAfterTab).toBe('a');
+    expect(settled.error).toBeUndefined();
+    expect(settled.result).toMatchObject({ saved: true, file: { content: 'a' } });
+    expect(editor.profile.writeModelHomeWorkspaceFile).toHaveBeenCalledTimes(1);
+    expect(textarea.value).toBe('a');
+  });
+
+  test('Tab still indents selected text when the editor is editable', () => {
+    editor.browser.context.Event = Event;
+    editor.activateBuffer('app.js', 'selected();', 'selected();', false);
+    editor.setBusy(false);
+    textarea.setSelectionRange(0, 'selected'.length);
+    const event = { type: 'keydown', key: 'Tab', preventDefault: jest.fn() };
+
+    textarea.dispatchEvent(event);
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(textarea.value).toBe('  ();');
+    expect(editor.state.buffers['app.js']).toMatchObject({ content: '  ();', dirty: true });
+  });
+
   test('types short code one visible Unicode character at a time before saving', async () => {
     const content = 'const icon = "👋";\n';
     const changes = recordChanges();
