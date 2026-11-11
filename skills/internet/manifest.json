@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "internet.research",
+  "name": "Internet Research",
+  "displayNameKey": "internetSkillName",
+  "descriptionKey": "internetSkillDescription",
+  "version": "1.0.0",
+  "entrypoint": "skills/internetSkill.js",
+  "builtIn": true,
+  "defaultEnabled": true,
+  "profiles": ["local", "api", "codex"],
+  "permissions": [
+    { "id": "network", "labelKey": "skillPermissionNetwork", "descriptionKey": "skillPermissionNetworkDescription", "required": true, "defaultGranted": true },
+    { "id": "credentials", "labelKey": "skillPermissionCredentials", "descriptionKey": "skillPermissionCredentialsDescription", "required": false, "defaultGranted": false }
+  ],
+  "setup": [
+    {
+      "id": "provider",
+      "type": "select",
+      "labelKey": "internetSkillProviderLabel",
+      "default": "auto",
+      "options": [
+        { "value": "auto", "labelKey": "internetProviderAuto" },
+        { "value": "google", "labelKey": "internetProviderGoogle" },
+        { "value": "fallback", "labelKey": "internetProviderFallback" }
+      ]
+    },
+    { "id": "googleApiKey", "type": "password", "labelKey": "internetSkillGoogleKeyLabel", "permission": "credentials", "autocomplete": "off" },
+    { "id": "googleCx", "type": "text", "labelKey": "internetSkillGoogleCxLabel", "permission": "credentials", "autocomplete": "off" }
+  ],
+  "testAction": "internet-search"
+}

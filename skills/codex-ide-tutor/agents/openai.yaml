@@ -1,0 +1,4 @@
+interface:
+  display_name: "Learn with Codex IDE"
+  short_description: "JavaScript und Codex IDE spielerisch lernen"
+  default_prompt: "Use $codex-ide-tutor to teach me JavaScript through Codex IDE architecture."

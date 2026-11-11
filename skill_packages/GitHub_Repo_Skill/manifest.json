@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "id": "github.repo-import",
+  "name": "GitHub Repository Import",
+  "displayName": {
+    "de": "GitHub-Repository importieren",
+    "en": "Import GitHub repository",
+    "fr": "Importer un dépôt GitHub"
+  },
+  "description": {
+    "de": "Importiert unterstützte Text- und Code-Dateien eines GitHub-Repositories in einen eigenen Repos-Ordner im Modell-Home.",
+    "en": "Imports supported text and code files from a GitHub repository into a dedicated Repos folder in the model home.",
+    "fr": "Importe les fichiers texte et code pris en charge d’un dépôt GitHub dans un dossier Repos dédié du dossier modèle."
+  },
+  "version": "1.0.2",
+  "entrypoint": "./index.js",
+  "defaultEnabled": false,
+  "profiles": ["local", "api", "codex"],
+  "permissions": [
+    {
+      "id": "network",
+      "label": {
+        "de": "GitHub-Netzwerkzugriff",
+        "en": "GitHub network access",
+        "fr": "Accès réseau à GitHub"
+      },
+      "description": {
+        "de": "Darf Repository-Metadaten und Dateiinhalte ausschließlich von GitHub abrufen.",
+        "en": "May retrieve repository metadata and file contents exclusively from GitHub.",
+        "fr": "Peut récupérer les métadonnées et le contenu des fichiers exclusivement depuis GitHub."
+      },
+      "required": true,
+      "defaultGranted": false
+    },
+    {
+      "id": "writeWorkspace",
+      "label": {
+        "de": "In Modell-Home schreiben",
+        "en": "Write to model home",
+        "fr": "Écrire dans le dossier modèle"
+      },
+      "description": {
+        "de": "Darf importierte Dateien ausschließlich unter Repos im Modell-Home anlegen oder im Update-Modus überschreiben.",
+        "en": "May create imported files exclusively below Repos in the model home or overwrite them in update mode.",
+        "fr": "Peut créer les fichiers importés exclusivement sous Repos dans le dossier modèle ou les remplacer en mode mise à jour."
+      },
+      "required": true,
+      "defaultGranted": false
+    },
+    {
+      "id": "githubToken",
+      "label": {
+        "de": "GitHub-Token verwenden",
+        "en": "Use GitHub token",
+        "fr": "Utiliser un jeton GitHub"
+      },
+      "description": {
+        "de": "Darf das optionale Token für private Repositories und höhere API-Limits verwenden. Es genügt Leserechte auf Repository-Inhalte.",
+        "en": "May use the optional token for private repositories and higher API limits. Read-only repository contents access is sufficient.",
+        "fr": "Peut utiliser le jeton facultatif pour les dépôts privés et des limites API plus élevées. Un accès en lecture au contenu suffit."
+      },
+      "required": false,
+      "defaultGranted": false
+    }
+  ],
+  "setup": [
+    {
+      "id": "githubToken",
+      "type": "password",
+      "label": {
+        "de": "GitHub-Token (optional)",
+        "en": "GitHub token (optional)",
+        "fr": "Jeton GitHub (facultatif)"
+      },
+      "permission": "githubToken"
+    }
+  ],
+  "agent": {
+    "description": {
+      "de": "Importiert den Default-Branch eines GitHub-Repositories als bearbeitbaren Projekt-Snapshot nach Repos im Modell-Home.",
+      "en": "Imports the default branch of a GitHub repository as an editable project snapshot below Repos in the model home.",
+      "fr": "Importe la branche par défaut d’un dépôt GitHub comme instantané de projet modifiable sous Repos dans le dossier modèle."
+    },
+    "instructions": {
+      "de": "Nur verwenden, wenn der Nutzer ausdrücklich ein GitHub-Repository importieren oder einen früheren Import aktualisieren möchte. Der Skill ist dafür auch in der Codex IDE verfügbar, sofern er installiert, aktiviert und mit Netzwerk- sowie Workspace-Schreibrecht freigegeben ist. Nicht verwenden, um ein bereits lokales Repository zu finden oder zu analysieren; dafür ist der IDE-Workspace-Index maßgeblich. Der Skill ist außerdem kein GitHub-Wiki- oder allgemeiner Dokumentationsleser; ausdrückliche Wiki- oder Webrecherche gehört zu internet.research. repository akzeptiert owner/repository oder eine normale github.com-Repository-URL. Für einen neuen Import operation=import verwenden. operation=update ausschließlich bei ausdrücklichem Aktualisierungs- oder Überschreibwunsch verwenden; es überschreibt passende unterstützte Dateien, löscht aber keine lokal verbliebenen Dateien. Der Skill importiert nur .md, .js, .css, .html und .py und ist kein vollständiger Git-Clone. Voraussetzung ist zusätzlich der aktivierte Standard-Skill workspace.extended-files mit Schreibrecht.",
+      "en": "Use only when the user explicitly wants to import a GitHub repository or update an earlier import. The skill is also available in the Codex IDE when installed, enabled, and granted network and workspace-write permissions. Do not use it to find or analyze an already-local repository; the IDE workspace index is authoritative for that. The skill is not a GitHub Wiki or general documentation reader either; explicit Wiki or web research belongs to internet.research. repository accepts owner/repository or a regular github.com repository URL. Use operation=import for a new import. Use operation=update only for an explicit update or overwrite request; it overwrites matching supported files but does not delete locally remaining files. The skill imports only .md, .js, .css, .html, and .py and is not a complete Git clone. The built-in workspace.extended-files skill with write permission must also be enabled.",
+      "fr": "Utiliser uniquement si l’utilisateur demande explicitement d’importer un dépôt GitHub ou de mettre à jour un import antérieur. Le skill est également disponible dans Codex IDE lorsqu’il est installé, activé et autorisé pour le réseau et l’écriture dans l’espace de travail. Ne pas l’utiliser pour rechercher ou analyser un dépôt déjà local ; l’index de l’espace de travail IDE fait autorité. Le skill n’est pas non plus un lecteur de Wiki GitHub ni de documentation générale ; une recherche Wiki ou Web explicite relève de internet.research. repository accepte propriétaire/dépôt ou une URL de dépôt github.com standard. Utiliser operation=import pour un nouvel import. Utiliser operation=update uniquement à la demande explicite de mise à jour ou de remplacement ; ce mode remplace les fichiers pris en charge correspondants mais ne supprime pas les fichiers locaux restants. Le skill importe uniquement .md, .js, .css, .html et .py et ne constitue pas un clone Git complet. Le skill standard workspace.extended-files avec droit d’écriture doit également être activé."
+    },
+    "resultType": "context",
+    "parameters": [
+      {
+        "id": "repository",
+        "type": "string",
+        "required": true,
+        "maxLength": 300,
+        "description": {
+          "de": "owner/repository",
+          "en": "owner/repository",
+          "fr": "propriétaire/dépôt"
+        }
+      },
+      {
+        "id": "operation",
+        "type": "string",
+        "required": true,
+        "enum": ["import", "update"],
+        "description": {
+          "de": "Aktion: import oder update",
+          "en": "Action: import or update",
+          "fr": "Action : import ou update"
+        }
+      }
+    ]
+  }
+}

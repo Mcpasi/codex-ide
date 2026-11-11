@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Codex IDE</title>
+  <meta name="description" content="Codex IDE ist eine eigenständige agentische Entwicklungsumgebung mit lokalem Modell, OpenAI-kompatibler API und offizieller Codex-Authentifizierung.">
+  <meta name="theme-color" content="#160b10">
+  <meta name="application-name" content="Codex IDE">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Codex IDE">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="codex_ide_icon_192.png">
+  <link rel="apple-touch-icon" href="codex_ide_icon_192.png">
+  <link rel="stylesheet" href="codex_ide/codex-ide.css?v=43">
+  <script src="skillSystem.js?v=43"></script>
+  <script src="agentResponse.js?v=43"></script>
+  <script src="codex_ide/syntax-highlighter.js?v=43"></script>
+  <script src="codex_ide/editor-diff.js?v=43"></script>
+  <script src="backendProfile.js?v=43"></script>
+  <script src="Safetyfilter.js?v=43"></script>
+  <script src="localModel.js?v=43"></script>
+  <script src="translations/de.js?v=43"></script>
+  <script src="translations/en.js?v=43"></script>
+  <script src="translations/fr.js?v=43"></script>
+</head>
+<body>
+  <main class="ide-shell">
+    <header class="ide-header">
+      <div class="ide-brand">
+        <img src="codex-ide.svg" alt="">
+        <div><h1 id="ideTitle">Codex IDE</h1><p id="ideScope">Dein Agent bei der Arbeit — jede Änderung live.</p></div>
+      </div>
+      <div class="ide-controls">
+        <label><span id="ideBackendLabel">Backend</span><select id="ideBackend"><option value="local">Lokal</option><option value="api">API</option><option value="codex">Codex Auth-Bridge</option></select></label>
+        <label id="ideModelControl"><span id="ideModelLabel">Codex-Modell</span><select id="ideModel"><option value="">Codex-Standard</option></select></label>
+        <label id="ideReasoningControl"><span id="ideReasoningLabel">Denkstufe</span><select id="ideReasoning"><option value="">Aus (Codex-Standard)</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="xhigh">Extra High</option><option value="max">Max</option><option value="ultra">Ultra</option></select></label>
+        <div class="language-switcher" aria-labelledby="ideLanguageLabel">
+          <span id="ideLanguageLabel">Sprache</span>
+          <div id="ideLanguage" class="language-options" role="group">
+            <button class="language-option" type="button" data-language="de" aria-pressed="true" aria-label="Deutsch" title="Deutsch"><span class="language-flag" aria-hidden="true">🇩🇪</span><span class="language-code">DE</span></button>
+            <button class="language-option" type="button" data-language="en" aria-pressed="false" aria-label="English" title="English"><span class="language-flag" aria-hidden="true">🇬🇧</span><span class="language-code">EN</span></button>
+            <button class="language-option" type="button" data-language="fr" aria-pressed="false" aria-label="Français" title="Français"><span class="language-flag" aria-hidden="true">🇫🇷</span><span class="language-code">FR</span></button>
+          </div>
+        </div>
+        <button id="ideSettingsOpen" type="button" aria-haspopup="dialog" aria-controls="ideSettingsOverlay">Einstellungen</button>
+      </div>
+      <p id="ideGatewayStatus" class="status" role="status" aria-live="polite"></p>
+    </header>
+
+    <div class="ide-grid">
+      <aside class="ide-files" aria-labelledby="ideFilesTitle">
+        <div class="panel-heading"><h2 id="ideFilesTitle">Workspace</h2><div class="file-actions"><button id="ideNewFolder" type="button">Ordner</button><button id="ideRefreshFiles" type="button" title="Aktualisieren" aria-label="Workspace aktualisieren">↻</button></div></div>
+        <p id="ideFileHint" class="hint">Ordner und unterstützte Dateien im Modell-Home. IDE-Änderungen werden über den begrenzten Gateway-Kanal gespeichert.</p>
+        <div id="ideFileList" class="file-list" role="tree" aria-label="Modell-Home-Workspace"></div>
+        <div class="skill-summary"><strong id="ideSkillsTitle">Agenten-Skills</strong><span id="ideSkillsStatus">werden geladen …</span></div>
+      </aside>
+
+      <section class="ide-editor-panel" aria-labelledby="ideEditorTitle">
+        <div class="panel-heading editor-heading"><h2 id="ideEditorTitle">Editor</h2><div class="editor-heading-actions"><span id="ideDirty" class="dirty"></span><button id="idePreviewFile" class="editor-preview-button" type="button" title="HTML-Vorschau im Browser öffnen" aria-label="HTML-Vorschau im Browser öffnen" hidden>▶</button></div></div>
+        <div id="ideTabs" class="editor-tabs" role="tablist" aria-label="Offene Dateien"></div>
+        <div class="path-row">
+          <input id="idePath" type="text" autocomplete="off" spellcheck="false" placeholder="relativer/pfad.md" aria-label="Relativer Dateipfad">
+          <button id="ideNewFile" type="button">Neu</button>
+          <button id="ideSaveFile" type="button" class="primary">Speichern</button>
+        </div>
+        <div id="ideEditorSurface" class="editor-surface" data-language="text">
+          <pre id="ideHighlight" class="code-highlight" aria-hidden="true"><code id="ideHighlightCode"></code></pre>
+          <textarea id="ideEditor" class="code-editor" wrap="off" spellcheck="false" placeholder="Öffne eine Datei oder beginne ein neues Dokument …"></textarea>
+        </div>
+        <footer class="editor-footer"><span id="ideEditorStatus" role="status" aria-live="polite">Bereit</span><span class="editor-meta"><span id="ideSyntaxMode">Syntax: Text</span><span id="idePosition">0 Zeichen</span></span></footer>
+      </section>
+
+      <section class="ide-agent" aria-labelledby="ideAgentTitle">
+        <div class="panel-heading agent-heading">
+          <h2 id="ideAgentTitle">Agent</h2>
+          <div class="session-controls">
+            <label id="ideSessionLabel" class="visually-hidden" for="ideSessionSelect">Aktive Sitzung</label>
+            <select id="ideSessionSelect" aria-labelledby="ideSessionLabel"></select>
+            <button id="ideRenameSession" type="button" title="Sitzung umbenennen" aria-label="Sitzung umbenennen">✎</button>
+            <button id="ideDeleteSession" type="button" title="Sitzung löschen" aria-label="Sitzung löschen">×</button>
+            <button id="ideClearSession" type="button">Neue Sitzung</button>
+          </div>
+        </div>
+        <div id="ideAnswer" class="answer" aria-live="polite">
+          <div id="ideSessionHistory" class="session-history" aria-label="Gespeicherter Sitzungsverlauf" hidden></div>
+          <article id="ideCurrentUser" class="chat-user" hidden><strong id="ideCurrentUserLabel">Du:</strong><div id="ideCurrentUserText"></div></article>
+          <div id="ideActivity" class="agent-activity" hidden></div>
+          <div id="ideTerminalPanel" class="ide-terminal" aria-labelledby="ideTerminalTitle" hidden>
+            <div class="panel-heading terminal-heading"><h2 id="ideTerminalTitle">Konsole</h2><button id="ideTerminalClear" type="button">Leeren</button></div>
+            <div id="ideTerminalOutput" class="terminal-output" role="log" aria-live="off" tabindex="0">
+              <p class="terminal-empty">Modellbefehle und Konsolenausgaben erscheinen hier live.</p>
+            </div>
+            <p id="ideTerminalStatus" class="terminal-status" role="status" aria-live="polite">Bereit</p>
+          </div>
+          <section id="ideFinalStep" class="agent-step final" data-state="idle"><strong><span id="ideFinalTitle">Finale Antwort</span></strong><div id="ideFinal"></div></section>
+        </div>
+        <form id="idePromptForm" class="prompt-form">
+          <label id="idePromptLabel" class="visually-hidden" for="idePrompt">Nachricht an den Agenten</label>
+          <textarea id="idePrompt" rows="3" aria-labelledby="idePromptLabel" aria-describedby="idePromptHint" placeholder="Beschreibe, was der Agent im Editor oder Modell-Home tun soll …"></textarea>
+          <div class="prompt-actions"><span id="idePromptHint" class="prompt-hint">Enter zum Senden · Shift+Enter für eine neue Zeile</span><button id="ideSend" type="submit" class="primary">Senden</button><button id="ideStop" type="button" hidden>Stoppen</button></div>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <div id="ideSettingsOverlay" class="settings-overlay" hidden>
+    <section class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="ideSettingsTitle">
+      <header class="settings-header"><div><h2 id="ideSettingsTitle">Einstellungen</h2><p id="ideSettingsIntro">Backends und Agenten-Skills der Codex IDE.</p></div><button id="ideSettingsClose" type="button" aria-label="Einstellungen schließen">×</button></header>
+      <div class="settings-content">
+        <details open>
+          <summary id="backendSettingsTitle">Generatives Backend</summary>
+          <div class="settings-section-body">
+            <label class="settings-field"><span id="backendSettingsLabel">Backend</span><select id="settingsBackend"><option value="local">Lokal</option><option value="api">API</option><option value="codex">Codex Auth-Bridge</option></select></label>
+            <p id="backendSettingsHint" class="settings-hint">Der Workspace bleibt lokal; nur die Modellerzeugung wechselt.</p>
+          </div>
+        </details>
+
+        <details id="localSettings">
+          <summary id="localSettingsTitle">Lokales Browser-Modell</summary>
+          <div class="settings-section-body">
+            <p id="localSettingsHint" class="settings-hint">Lädt ein Transformers.js-Textmodell im Browser. Der erste Start kann Modellgewicht herunterladen.</p>
+            <label class="settings-field"><span id="localModelLabel">Modell-ID</span><input id="customChatModelId" type="text" autocomplete="off" placeholder="Xenova/distilgpt2"></label>
+            <label class="settings-field"><span id="localMaxTokensLabel">Max. neue Tokens</span><input id="llmMaxTokensInput" type="number" min="20" max="4096" value="300"></label>
+            <label class="settings-toggle"><input id="llmEnabledToggle" type="checkbox"><span id="localEnabledLabel">Lokales Modell aktivieren</span></label>
+            <div class="settings-actions"><button id="reloadChatModelBtn" type="button">Modell laden</button><span id="chatModelStatusText" class="settings-note" role="status" aria-live="polite">Kein Modell geladen</span></div>
+          </div>
+        </details>
+
+        <details id="apiSettings">
+          <summary id="apiSettingsTitle">API-Einstellungen</summary>
+          <div class="settings-section-body">
+            <p id="apiSettingsHint" class="settings-hint">OpenAI-kompatibel, zum Beispiel OpenAI, OpenRouter, Ollama oder LM Studio. API-Keys bleiben im Browser-Speicher.</p>
+            <label class="settings-field"><span id="apiUrlLabel">API-URL</span><input id="codexIdeApiUrlInput" type="url" autocomplete="off" placeholder="https://api.openai.com/v1/chat/completions"></label>
+            <label class="settings-field"><span id="apiKeyLabel">API-Key</span><input id="codexIdeApiKeyInput" type="password" autocomplete="off"></label>
+            <label class="settings-field"><span id="apiModelLabel">Modell</span><input id="codexIdeApiModelInput" type="text" autocomplete="off" placeholder="gpt-5.4-mini"></label>
+            <label class="settings-field"><span id="apiMaxTokensLabel">Max. Antwort-Tokens</span><input id="codexIdeApiMaxTokensInput" type="number" min="50" max="32768" value="700"></label>
+            <div class="settings-actions"><button id="apiSaveBtn" type="button">Speichern</button><button id="apiTestBtn" type="button">Verbindung testen</button><span id="apiStatusText" class="settings-note" role="status" aria-live="polite"></span></div>
+          </div>
+        </details>
+
+        <details id="codexSettings">
+          <summary id="codexSettingsTitle">Codex Auth-Bridge</summary>
+          <div class="settings-section-body">
+            <p id="codexSettingsHint" class="settings-hint">Verwendet ausschließlich die offizielle Codex-CLI-Anmeldung und das lokale Codex-IDE-Gateway.</p>
+            <section class="codex-auth-setup" aria-labelledby="codexAuthTitle">
+              <strong id="codexAuthTitle">Codex-Anmeldung</strong>
+              <p id="codexAuthHint" class="settings-hint">Führe einen Login-Befehl im Projektordner aus. Nutze Device Auth auf Termux oder einem Gerät ohne Browser-Rückleitung.</p>
+              <div class="codex-command-row"><code>codex-ide codex login</code><button id="codexCopyLoginBtn" type="button">Login-Befehl kopieren</button></div>
+              <div class="codex-command-row"><code>codex-ide codex login --device-auth</code><button id="codexCopyDeviceLoginBtn" type="button">Device-Auth-Befehl kopieren</button></div>
+              <div class="codex-command-row"><code>codex-ide codex status</code><button id="codexCopyStatusBtn" type="button">Status-Befehl kopieren</button></div>
+            </section>
+            <section id="codexUsage" class="codex-usage" aria-labelledby="codexUsageTitle">
+              <strong id="codexUsageTitle">Nutzungslimits</strong>
+              <p id="codexUsageHint" class="settings-hint">Verbleibendes Codex-Kontingent laut lokaler CLI-Anmeldung.</p>
+              <div class="codex-usage-row">
+                <span id="codexDailyUsageLabel" class="codex-usage-label">Täglich</span>
+                <div id="codexDailyUsageBar" class="codex-usage-bar is-unavailable" role="progressbar" aria-labelledby="codexDailyUsageLabel" aria-valuemin="0" aria-valuemax="100" aria-valuetext="Nicht verfügbar">
+                  <span class="codex-usage-fill" aria-hidden="true"></span><span class="codex-usage-value">Nicht verfügbar</span>
+                </div>
+              </div>
+              <div class="codex-usage-row">
+                <span id="codexWeeklyUsageLabel" class="codex-usage-label">Wöchentlich</span>
+                <div id="codexWeeklyUsageBar" class="codex-usage-bar is-unavailable" role="progressbar" aria-labelledby="codexWeeklyUsageLabel" aria-valuemin="0" aria-valuemax="100" aria-valuetext="Nicht verfügbar">
+                  <span class="codex-usage-fill" aria-hidden="true"></span><span class="codex-usage-value">Nicht verfügbar</span>
+                </div>
+              </div>
+              <p id="codexUsageStatus" class="settings-note" role="status" aria-live="polite">Wird beim Öffnen geladen.</p>
+            </section>
+            <label class="settings-field"><span id="codexBridgeUrlLabel">Gateway-URL</span><input id="codexIdeCodexBridgeUrlInput" type="url" autocomplete="off" value="http://localhost:8787"></label>
+            <label class="settings-field"><span id="codexMaxTokensLabel">Max. Antwort-Tokens</span><input id="codexIdeCodexMaxTokensInput" type="number" min="50" max="32768" value="700"></label>
+            <div class="settings-actions"><button id="codexSaveBtn" type="button">Speichern</button><button id="codexTestBtn" type="button">Gateway testen</button><button id="codexStatusBtn" type="button">Status prüfen</button><span id="codexStatusText" class="settings-note" role="status" aria-live="polite"></span></div>
+          </div>
+        </details>
+
+        <details id="skillSettings" open>
+          <summary id="skillSettingsTitle">Skills</summary>
+          <div class="settings-section-body">
+            <p id="skillSettingsIntro" class="settings-hint">Installiere vertrauenswürdige Skills und verwalte Aktivierung, Backend-Profile, Rechte und Konfiguration direkt in der IDE.</p>
+            <section class="skill-installer" aria-labelledby="skillInstallTitle">
+              <h3 id="skillInstallTitle">Skill installieren</h3>
+              <p id="skillRuntimeWarning" class="settings-hint">Skill-Einstiegspunkte führen JavaScript in dieser Anwendung aus. Installiere nur vertrauenswürdige Quellen.</p>
+              <label class="settings-field"><span id="skillManifestUrlLabel">Manifest-URL</span><input id="skillManifestUrl" type="url" inputmode="url" autocomplete="off" placeholder="https://example.org/skill/manifest.json"></label>
+              <div class="settings-actions"><button id="skillInstallFromUrlBtn" type="button">Von URL installieren</button><input id="skillLocalFiles" type="file" accept=".codexskill,.json,.js,application/json,text/javascript" multiple hidden><button id="skillChooseLocalFilesBtn" type="button">Lokales Paket auswählen</button></div>
+              <label class="settings-toggle"><input id="skillTrustSource" type="checkbox"><span id="skillTrustSourceLabel">Ich vertraue der Quelle und möchte ihren Code ausführen.</span></label>
+              <p id="skillInstallStatus" class="settings-note" role="status" aria-live="polite"></p>
+            </section>
+            <div id="skillCatalog" class="skill-catalog" aria-live="polite"><p class="settings-note">Skill-Manifeste werden geladen …</p></div>
+          </div>
+        </details>
+      </div>
+    </section>
+  </div>
+
+  <script src="codex_ide/settings.js?v=43" defer></script>
+  <script src="codex_ide/codex-ide.js?v=43" defer></script>
+</body>
+</html>

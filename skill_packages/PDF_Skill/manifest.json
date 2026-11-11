@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "id": "workspace.pdf",
+  "name": "Model Home PDF",
+  "displayName": {
+    "de": "PDF im Modell-Home",
+    "en": "Model Home PDF",
+    "fr": "PDF du dossier modèle"
+  },
+  "description": {
+    "de": "Liest textbasierte PDF-Dateien und erstellt neue Text-PDFs ausschließlich im Modell-Home.",
+    "en": "Reads text-based PDF files and creates new text PDFs exclusively inside the model home.",
+    "fr": "Lit les PDF textuels et crée de nouveaux PDF texte exclusivement dans le dossier modèle."
+  },
+  "version": "1.0.1",
+  "entrypoint": "./index.js",
+  "defaultEnabled": false,
+  "profiles": ["local", "api", "codex"],
+  "permissions": [
+    {
+      "id": "readPdf",
+      "label": {
+        "de": "PDF lesen",
+        "en": "Read PDF",
+        "fr": "Lire les PDF"
+      },
+      "description": {
+        "de": "Darf PDF-Dateien innerhalb des Modell-Homes lesen und Text daraus extrahieren.",
+        "en": "May read PDF files inside the model home and extract their text.",
+        "fr": "Peut lire les PDF dans le dossier modèle et en extraire le texte."
+      },
+      "required": false,
+      "defaultGranted": false
+    },
+    {
+      "id": "writePdf",
+      "label": {
+        "de": "PDF schreiben",
+        "en": "Write PDF",
+        "fr": "Écrire les PDF"
+      },
+      "description": {
+        "de": "Darf neue Text-PDFs innerhalb des Modell-Homes anlegen oder ausdrücklich überschreiben.",
+        "en": "May create new text PDFs inside the model home or explicitly overwrite them.",
+        "fr": "Peut créer des PDF texte dans le dossier modèle ou les remplacer explicitement."
+      },
+      "required": false,
+      "defaultGranted": false
+    }
+  ],
+  "agent": {
+    "description": {
+      "de": "Liest eine PDF-Datei aus dem Modell-Home oder schreibt Text als neue PDF-Datei dorthin.",
+      "en": "Reads a PDF file from the model home or writes text there as a new PDF file.",
+      "fr": "Lit un PDF du dossier modèle ou y écrit du texte dans un nouveau PDF."
+    },
+    "instructions": {
+      "de": "Nur für ausdrückliche PDF-Aufgaben im Modell-Home verwenden. Für Lesen operation=read und einen relativen .pdf-Pfad senden. Für Schreiben operation=write, relativen .pdf-Pfad und vollständigen Inhalt senden. overwrite nur bei ausdrücklichem Überschreibwunsch setzen. Der Leser unterstützt textbasierte, unverschlüsselte PDFs; bei Scans oder unbekannter Kodierung die Einschränkung klar nennen.",
+      "en": "Use only for explicit PDF tasks inside the model home. For reading, send operation=read and a relative .pdf path. For writing, send operation=write, a relative .pdf path, and the complete content. Set overwrite only when replacement was explicitly requested. The reader supports text-based, unencrypted PDFs; clearly state the limitation for scans or unknown encodings.",
+      "fr": "Utiliser uniquement pour des tâches PDF explicites dans le dossier modèle. Pour lire, envoyer operation=read et un chemin .pdf relatif. Pour écrire, envoyer operation=write, un chemin .pdf relatif et le contenu complet. Ne définir overwrite que si le remplacement est explicitement demandé. Le lecteur prend en charge les PDF textuels non chiffrés ; signaler clairement la limite pour les scans ou les encodages inconnus."
+    },
+    "resultType": "context",
+    "permissionRules": [
+      {
+        "parameter": "operation",
+        "equals": "read",
+        "permission": "readPdf"
+      },
+      {
+        "parameter": "operation",
+        "equals": "write",
+        "permission": "writePdf"
+      }
+    ],
+    "parameters": [
+      {
+        "id": "operation",
+        "type": "string",
+        "required": true,
+        "enum": ["read", "write"],
+        "description": {
+          "de": "Aktion: read oder write",
+          "en": "Action: read or write",
+          "fr": "Action : read ou write"
+        }
+      },
+      {
+        "id": "path",
+        "type": "string",
+        "required": true,
+        "maxLength": 500,
+        "description": {
+          "de": "Relativer .pdf-Pfad innerhalb des Modell-Homes",
+          "en": "Relative .pdf path inside the model home",
+          "fr": "Chemin .pdf relatif dans le dossier modèle"
+        }
+      },
+      {
+        "id": "content",
+        "type": "string",
+        "required": false,
+        "description": {
+          "de": "Vollständiger Textinhalt für eine neue PDF-Datei",
+          "en": "Complete text content for a new PDF file",
+          "fr": "Contenu texte complet du nouveau fichier PDF"
+        }
+      },
+      {
+        "id": "title",
+        "type": "string",
+        "required": false,
+        "maxLength": 300,
+        "description": {
+          "de": "Optionaler Dokumenttitel",
+          "en": "Optional document title",
+          "fr": "Titre facultatif du document"
+        }
+      },
+      {
+        "id": "overwrite",
+        "type": "boolean",
+        "required": false,
+        "description": {
+          "de": "Vorhandene PDF ausdrücklich überschreiben",
+          "en": "Explicitly overwrite an existing PDF",
+          "fr": "Remplacer explicitement un PDF existant"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "name": "Codex IDE",
+  "short_name": "Codex IDE",
+  "id": "./",
+  "description": "Eigenständige agentische Entwicklungsumgebung mit lokalem Modell, OpenAI-kompatibler API und Codex Auth-Bridge.",
+  "lang": "de-DE",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0c080a",
+  "theme_color": "#160b10",
+  "categories": ["productivity", "education", "utilities"],
+  "icons": [
+    {
+      "src": "codex_ide_icon_192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "codex_ide_icon_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Codex IDE starten",
+      "short_name": "Start",
+      "description": "Oeffnet direkt den Codex-IDE-Workspace.",
+      "url": "./index.html",
+      "icons": [
+        {
+          "src": "codex_ide_icon_192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

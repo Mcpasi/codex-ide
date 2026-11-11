@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "workspace.extended-files",
+  "name": "Extended project files",
+  "displayNameKey": "extendedFilesSkillName",
+  "descriptionKey": "extendedFilesSkillDescription",
+  "version": "1.1.0",
+  "entrypoint": "skills/extendedFileSkill.js",
+  "builtIn": true,
+  "defaultEnabled": false,
+  "profiles": ["local", "api", "codex"],
+  "permissions": [
+    {
+      "id": "readCode",
+      "labelKey": "skillPermissionReadCode",
+      "descriptionKey": "skillPermissionReadCodeDescription",
+      "required": false,
+      "defaultGranted": false
+    },
+    {
+      "id": "writeCode",
+      "labelKey": "skillPermissionWriteCode",
+      "descriptionKey": "skillPermissionWriteCodeDescription",
+      "required": false,
+      "defaultGranted": false
+    }
+  ]
+}

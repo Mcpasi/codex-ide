@@ -1,0 +1,103 @@
+{
+  "name": "codex-ide",
+  "version": "1.2.9",
+  "description": "Eigenständige Codex IDE mit lokalem Modell, OpenAI-kompatibler API, Codex Auth-Bridge und integriertem Skill-System.",
+  "main": "scripts/codex-ide.js",
+  "bin": {
+    "codex-ide": "codex-ide"
+  },
+  "files": [
+    "codex-ide",
+    "scripts/codex-ide.js",
+    "scripts/codex-ide-update.js",
+    "scripts/codex-ide-gateway.js",
+    "scripts/codex-bridge.js",
+    "scripts/codex-app-server-client.js",
+    "scripts/codex-workspace-policy.js",
+    "scripts/codex-readonly-runner.c",
+    "scripts/skill-package.js",
+    "scripts/validate-pwa.js",
+    "index.html",
+    "manifest.json",
+    "sw.js",
+    "codex-ide.svg",
+    "codex_ide_icon_192.png",
+    "codex_ide_icon_512.png",
+    "Safetyfilter.js",
+    "agentResponse.js",
+    "backendProfile.js",
+    "localModel.js",
+    "skillSystem.js",
+    "codex_ide/**",
+    "skills/**",
+    "skill_packages/**",
+    "translations/**",
+    "model-home/.gitkeep",
+    "README.md",
+    "README_EN.md",
+    "DOKUMENTATION.md",
+    "DOKUMENTATION_EN.md",
+    "SKILL_DEVELOPMENT.md",
+    "SKILL_DEVELOPMENT_EN.md",
+    "doku.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "keywords": [
+    "codex",
+    "ide",
+    "agent",
+    "editor",
+    "termux",
+    "pwa"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build:safetyfilter": "tsc",
+    "start": "node codex-ide start",
+    "gateway": "node codex-ide gateway",
+    "codex:bridge": "node codex-ide gateway",
+    "codex:login": "node codex-ide codex login",
+    "codex:login:device": "node codex-ide codex login --device-auth",
+    "codex:login:persistent": "node codex-ide codex login",
+    "codex:login:persistent:device": "node codex-ide codex login --device-auth",
+    "codex:status": "node codex-ide codex status",
+    "pwa:validate": "node scripts/validate-pwa.js",
+    "serve": "node codex-ide start --no-open",
+    "test": "jest --runInBand",
+    "test:performance": "jest --runInBand test/performance.test.js",
+    "test:coverage": "npm test -- --coverage",
+    "verify:syntax": "node -c backendProfile.js && node -c localModel.js && node -c skillSystem.js && node -c codex_ide/settings.js && node -c codex_ide/codex-ide.js && node -c codex_ide/editor-diff.js && node -c scripts/codex-bridge.js && node -c scripts/codex-app-server-client.js && node -c scripts/codex-workspace-policy.js && node -c scripts/codex-ide-gateway.js && node -c scripts/codex-ide-update.js && node -c scripts/codex-ide.js && cc -fsyntax-only scripts/codex-readonly-runner.c",
+    "verify:release": "npm run verify:syntax && npm run pwa:validate && npm test -- --runInBand && npm pack --dry-run --ignore-scripts",
+    "prepublishOnly": "npm run verify:release"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "<rootDir>/test/**/*.test.js"
+    ],
+    "clearMocks": true,
+    "restoreMocks": true,
+    "collectCoverageFrom": [
+      "*.js",
+      "scripts/*.js",
+      "codex_ide/*.js",
+      "skills/*.js"
+    ],
+    "coverageDirectory": "<rootDir>/coverage",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/model-home/"
+    ]
+  },
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "typescript": "^5.9.3"
+  }
+}

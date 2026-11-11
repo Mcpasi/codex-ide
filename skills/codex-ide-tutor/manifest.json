@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "learning.codex-ide",
+  "name": "Learn with Codex IDE",
+  "displayNameKey": "codexIdeTutorSkillName",
+  "descriptionKey": "codexIdeTutorSkillDescription",
+  "version": "1.0.0",
+  "entrypoint": "skills/codexIdeTutorSkill.js",
+  "builtIn": true,
+  "defaultEnabled": false,
+  "profiles": ["local", "api", "codex"],
+  "permissions": []
+}
