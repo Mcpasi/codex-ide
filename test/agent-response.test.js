@@ -16,6 +16,14 @@ describe('agent response presentation', () => {
     expect(response.parse(null)).toEqual({ thought: '', reply: '', skills: [] });
   });
 
+  test.each(['', ' \n\t '])('keeps an empty final block separate from the work summary: %j', finalText => {
+    const raw = '<codex_ide_thought>Datei geprüft.</codex_ide_thought>' +
+      '<codex_ide_final>' + finalText + '</codex_ide_final>';
+
+    expect(response.parseLive(raw)).toEqual({ thought: 'Datei geprüft.', reply: '' });
+    expect(response.parse(raw)).toEqual({ thought: 'Datei geprüft.', reply: '', skills: [] });
+  });
+
   test.each([
     '/home/alice/model-home/secret.json',
     'C:\\Users\\alice\\model-home\\secret.json',

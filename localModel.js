@@ -226,7 +226,7 @@
       }
     }
     if (earliest >= 0) text = text.slice(0, earliest).trim();
-    text = text.replace(/\s+/g, ' ').trim();
+    // Preserve Markdown, code indentation and whitespace inside JSON strings.
     if (text && !/[.!?…]$/.test(text)) text += '.';
     return text || null;
   }

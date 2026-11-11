@@ -54,7 +54,7 @@
 
   function taggedValue(text, tag) {
     var match = String(text || '').match(new RegExp('<' + tag + '>([\\s\\S]*?)<\\/' + tag + '>', 'i'));
-    return match ? match[1].trim() : '';
+    return match ? match[1].trim() : null;
   }
 
   function stripIncompleteTag(text) {
@@ -81,7 +81,7 @@
     var raw = String(rawReply == null ? '' : rawReply).trim();
     var thought = taggedValue(raw, THOUGHT_TAG);
     var finalReply = taggedValue(raw, FINAL_TAG);
-    if (!finalReply) finalReply = raw;
+    if (finalReply === null) finalReply = raw;
     if (!thought) thought = String(opts.fallbackThought || '').trim();
     return {
       thought: sanitize(thought, opts.protectedPaths),

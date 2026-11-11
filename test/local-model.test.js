@@ -38,6 +38,37 @@ describe('local browser model without model downloads', () => {
     expect(generator.mock.calls[0][0]).toContain('Nutzer: Hallo');
   });
 
+  test.each(['generate', 'chatCompletion'])('preserves Markdown, code indentation and literal spaces in %s', async method => {
+    await model.init('test/model');
+    const reply = '# Beispiel\n\n```python\ndef greet():\n    print("Grüße  👋")\n```\n\nFertig.';
+    generator.mockImplementationOnce(async prompt => [{
+      generated_text: prompt + reply + '<|im_end|>ignored continuation'
+    }]);
+
+    const result = method === 'generate'
+      ? model.generate('Zeige Python-Code', { conversationHistory: [] })
+      : model.chatCompletion([{ role: 'user', content: 'Zeige Python-Code' }]);
+    await expect(result).resolves.toBe(reply);
+  });
+
+  test('preserves literal spaces inside a structured editor replacement', async () => {
+    await model.init('test/model');
+    const request = {
+      operation: 'edit', path: 'app.py',
+      oldText: '    print("Grüße  👋")', newText: '    print("Hallo  👋")'
+    };
+    generator.mockImplementationOnce(async prompt => [{
+      generated_text: prompt + '<codex_ide_editor_request>' + JSON.stringify(request) + '</codex_ide_editor_request>'
+    }]);
+
+    const reply = await model.chatCompletion([{ role: 'user', content: 'Ändere die Begrüßung' }], 100, {
+      editorWorkspaceMode: true
+    });
+    const match = reply.match(/<codex_ide_editor_request>([\s\S]*?)<\/codex_ide_editor_request>/);
+    expect(match).not.toBeNull();
+    expect(JSON.parse(match[1])).toEqual(request);
+  });
+
   test('keeps a per-call token budget separate from the saved user limit', async () => {
     await model.init('test/model');
     model.setMaxTokens(1024);
