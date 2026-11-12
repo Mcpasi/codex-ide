@@ -49,6 +49,8 @@ standardmäßigen Jest-Instrumentierung nicht als Coverage erfasst.
 | `chat-browser.test.js` | Echte Chromium-Darstellung von Chat, aufklappbaren Denk-/Toolkarten, Konsole, Verlauf, wachsender Eingabe und Scrollverhalten auf Desktop und schmalen Ansichten |
 | `agent-activity.test.js` | Native Denkkarten ohne synthetische Duplikate, stabile DOM-Knoten und Aufklappzustände, Mehrteiligkeit, parallele Werkzeuge und Recovery-Identität |
 | `app-server-client.test.js` | JSONL, Initialisierung, parallele Anfragen, Session-Wiederaufnahme, Abbruch, Timeouts, Werkzeugfreigaben und UTF-8 |
+| `antigravity.test.js` | Offizielle Auth-Probe und Login, CLI-Modellformat, persistente NDJSON-Prozesse, fragmentiertes UTF-8, Sitzungswarteschlangen, Abbruch/Reset, Fehlerstatus und Workspace-/Editor-Dispatch |
+| `antigravity-gateway.test.js` | Echter HTTP-/SSE-Weg vom simulierten CLI-Prozess ueber Workspace-Lesen und Wegwerf-Pruefkonsole bis zum sichtbaren Editor, echter Speicherung und Folgeturn; Host-/Origin-Schutz und unabhaengige Auth-/Modell-/Reset-Routen |
 | `bridge-protocol.test.js` | Nachrichten, Prompts, Antwortformat, Limits, Memory und expliziter Dateikontext |
 | `cli.test.js` | Argumente, Befehle und Aliase, Login, Health-Probe und Gateway-Konfiguration |
 | `update.test.js` | Versionen, verifizierte Sicherungen, Symlink-Erhalt und Wiederherstellung nach Updatefehlern |
@@ -64,7 +66,7 @@ Datei- und Updateoperationen verwenden ausschließlich temporäre Verzeichnisse
 unter dem temporären Systempfad, die nach den Tests entfernt werden. Das echte
 `model-home/` wird nicht verändert. Modelle, npm-Updates und Codex-Prozesse
 werden simuliert; gezielte Konsolentests starten lokale Node-Prozesse in temporaeren Workspaces; die Suite benötigt weder Anmeldedaten noch
-externe Dienste oder Modelldownloads. Die HTTP-Integrationstests öffnen kurz
+externe Dienste oder Modelldownloads. Auch Antigravity-CLI-Prozesse und deren Anmeldung werden simuliert. `editor-stream.test.js`, `editor-permissions.test.js` und der Planer-Performance-Test laufen mit Codex und Antigravity gegen dieselben sichtbaren Editor- und Speicherfunktionen. Die HTTP-Integrationstests öffnen kurz
 einen zufällig vergebenen Port auf `127.0.0.1`; die Laufumgebung muss das erlauben.
 
 Die Plattformtests verwenden `path.posix` und `path.win32` mit simulierten

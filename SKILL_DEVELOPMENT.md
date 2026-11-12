@@ -37,7 +37,7 @@ Das folgende Manifest ist vollständig installierbar:
   "version": "1.0.0",
   "entrypoint": "./index.js",
   "defaultEnabled": false,
-  "profiles": ["local", "api", "codex"],
+  "profiles": ["local", "api", "codex", "antigravity"],
   "permissions": [
     {
       "id": "network",

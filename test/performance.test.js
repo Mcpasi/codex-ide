@@ -8,6 +8,8 @@ const { createBrowser } = require('./helpers/browser');
 const { createEditor } = require('./helpers/editor');
 const { createAppServerHarness } = require('./helpers/app-server');
 const { CodexAppServerClient } = require('../scripts/codex-app-server-client');
+const { AntigravityClient } = require('../scripts/backends/antigravity');
+const { createAntigravityHarness } = require('./helpers/antigravity');
 
 const samples = [];
 function report(name, metrics) { samples.push({ name, ...metrics }); }
@@ -39,6 +41,23 @@ afterAll(() => {
 });
 
 describe('streaming performance budgets', () => {
+  test('keeps Antigravity warm across planner, audit and follow-up turns', async () => {
+    const harness = createAntigravityHarness();
+    const client = new AntigravityClient({ spawnImpl: harness.spawnImpl });
+    const started = performance.now();
+    try {
+      for (let turn = 0; turn < 10; turn++) {
+        const tokens = [];
+        await client.run({ sessionId: 'performance', workdir: __dirname, prompt: 'Full task', followupPrompt: 'Next step',
+          outputSchema: turn % 2 ? { type: 'object' } : null, onToken: text => tokens.push(text) });
+        expect(tokens.join('')).toBe('Grüße 👋');
+      }
+      const ms = performance.now() - started;
+      report('antigravity-persistent-turns', { turns: 10, ms, processes: harness.spawnImpl.mock.calls.length });
+      expect(harness.spawnImpl).toHaveBeenCalledTimes(1);
+      expect(ms).toBeLessThan(1000);
+    } finally { client.close(); }
+  });
   test('decodes growing editor requests without repeatedly decoding their full content', () => {
     const browser = createBrowser();
     const { extract } = loadStreamingBackend(browser);
@@ -82,10 +101,11 @@ describe('streaming performance budgets', () => {
     expect(ms).toBeLessThan(750);
   });
 
-  test('keeps the production planner responsive across token events and editor handoff', async () => {
+  test.each(['codex', 'antigravity'])('keeps the %s planner responsive across token events and editor handoff', async provider => {
     const browser = createBrowser();
     loadStreamingBackend(browser);
     const profile = browser.window.codexIdeProfile;
+    profile.set(provider);
     const content = 'const greeting = "Grüße 👋";\n'.repeat(3000);
     const request = '<codex_ide_editor_request>' + JSON.stringify({ operation: 'write', path: 'src/new.js', content }) + '</codex_ide_editor_request>';
     const events = [];
@@ -113,7 +133,7 @@ describe('streaming performance budgets', () => {
       }
     });
     const ms = performance.now() - start;
-    report('planner-stream-to-editor', { contentChars: content.length, tokenEvents: events.length, drafts, firstDraftMs: firstDraft, ms });
+    report('planner-stream-to-editor', { provider, contentChars: content.length, tokenEvents: events.length, drafts, firstDraftMs: firstDraft, ms });
     expect(result).toContain('Erledigt.');
     expect(drafts).toBeGreaterThan(100);
     expect(calls).toBe(3);

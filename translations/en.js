@@ -2,6 +2,13 @@
   window.CodexIdeLocales = window.CodexIdeLocales || {};
   var base = window.CodexIdeLocales.de ? window.CodexIdeLocales.de.ui : {};
   window.CodexIdeLocales.en = { ui: Object.assign({}, base, {
+    skillProfileAntigravity: "Antigravity CLI",
+    antigravityDefaultModel: "Antigravity default",
+    antigravityModelLabel: "Antigravity model",
+    antigravityReady: "Gateway and Antigravity are ready.",
+    antigravityLoginRequired: "Gateway is reachable; sign in to Antigravity.",
+    antigravitySettingsHint: "Uses your existing Antigravity sign-in. Changes appear directly in the editor and are then saved.",
+
     agentPromptLabel: 'Message to the agent', agentPromptHint: 'Enter to send · Shift+Enter for a new line',
     agentThoughtTitle: 'Thinking', agentToolTitle: 'Tool',
     agentActivityRunning: 'Running …', agentActivityComplete: 'Completed', agentActivityStopped: 'Stopped', agentActivityError: 'Failed', agentActivityBlocked: 'Blocked', agentActivityWaiting: 'Waiting',

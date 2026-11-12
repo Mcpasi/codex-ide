@@ -26,6 +26,7 @@ const {
 } = require('./codex-ide-update');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
+const antigravity = require('./backends/antigravity');
 
 function resolveSkillDirectoryArg(directory) {
   const value = String(directory || '').trim();
@@ -59,6 +60,8 @@ function printUsage(logger = console) {
     '  codex-ide codex login',
     '  codex-ide codex login --device-auth',
     '  codex-ide codex status',
+    '  codex-ide antigravity login',
+    '  codex-ide antigravity status',
     '  codex-ide skill validate <skill-ordner>',
     '  codex-ide skill pack <skill-ordner> [ausgabe.codexskill]',
     '',
@@ -307,6 +310,15 @@ async function main(argv = process.argv.slice(2), options = {}) {
     if (subcommand === 'gateway' || subcommand === 'bridge') {
       startCliGateway(parsed.flags, !!parsed.flags.open, options);
       return 0;
+    }
+  }
+
+  if (command === 'antigravity') {
+    if (subcommand === 'login') return antigravity.runLogin(options);
+    if (subcommand === 'status') {
+      const status = await antigravity.getStatus(options);
+      logger.log(status.login ? status.login.message : status.error);
+      return status.loggedIn ? 0 : 1;
     }
   }
 

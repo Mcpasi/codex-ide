@@ -17,7 +17,7 @@ A skill entrypoint is JavaScript running in the same browser context as Codex ID
 
 ## Manifest and runtime contract
 
-Manifest schema version 1 requires `id`, `name`, a semantic `version`, `entrypoint`, `profiles`, `permissions`, and an `agent` contract for external skills. Relative entrypoints resolve against the manifest URL. Published agent skills may target any subset of the shared agentic profiles `local`, `api`, and `codex`.
+Manifest schema version 1 requires `id`, `name`, a semantic `version`, `entrypoint`, `profiles`, `permissions`, and an `agent` contract for external skills. Relative entrypoints resolve against the manifest URL. Published agent skills may target any subset of the shared agentic profiles `local`, `api`, `codex`, and `antigravity`.
 
 User-facing values can be either a string or an object containing `de`, `en`, and `fr`. This applies to display names, descriptions, permission/setup labels, parameter descriptions, and `agent.description`/`agent.instructions`. Published skills should supply all three languages.
 

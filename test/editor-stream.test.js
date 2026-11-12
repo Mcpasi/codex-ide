@@ -7,7 +7,7 @@ const { createEditor } = require('./helpers/editor');
 const { createFixture } = require('./helpers/fixture');
 const bridge = require('../scripts/codex-bridge');
 
-describe('editor requests streamed from the backend', () => {
+describe.each(['codex', 'antigravity'])('editor requests streamed from the %s backend', provider => {
   let editor;
   let extract;
 
@@ -21,6 +21,7 @@ describe('editor requests streamed from the backend', () => {
       window.editorDispatchUnderTest = runEditorRequest;
       window.editorBackendUnderTest = window.codexIdeProfile;
     })();`), editor.browser.context, { filename });
+    editor.browser.window.editorBackendUnderTest.set(provider);
     editor.browser.window.codexIdeProfile = editor.profile;
     extract = text => editor.browser.window.editorStreamUnderTest(text, '', true);
   });
@@ -172,7 +173,7 @@ describe('editor requests streamed from the backend', () => {
     const fixture = createFixture();
     const backend = editor.browser.window.editorBackendUnderTest;
     editor.browser.window.codexIdeProfile = backend;
-    backend.set('codex');
+    backend.set(provider);
     const first = { operation: 'write', path: 'new.js', content: 'const value = "first 👋";\n' };
     const later = [
       { operation: 'write', path: laterPath, content: 'const value = "second";\n' },

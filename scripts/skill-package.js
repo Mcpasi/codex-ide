@@ -60,9 +60,9 @@ function validateManifest(manifest) {
   assertId(manifest.id, 'Skill-ID', true);
   if (typeof manifest.name !== 'string' || !manifest.name.trim()) throw new Error('name fehlt');
   if (typeof manifest.version !== 'string' || !VERSION_PATTERN.test(manifest.version)) throw new Error('version muss semantisch sein, z. B. 1.0.0');
-  const validProfiles = new Set(['local', 'api', 'codex']);
+  const validProfiles = new Set(['local', 'api', 'codex', 'antigravity']);
   if (!Array.isArray(manifest.profiles) || !manifest.profiles.length || manifest.profiles.some(profile => !validProfiles.has(profile))) {
-    throw new Error('profiles darf nur local, api oder codex enthalten');
+    throw new Error('profiles darf nur local, api, codex oder antigravity enthalten');
   }
   if (!Array.isArray(manifest.permissions)) throw new Error('permissions muss ein Array sein');
   if (manifest.permissions.length > 20) throw new Error('zu viele Skill-Rechte');

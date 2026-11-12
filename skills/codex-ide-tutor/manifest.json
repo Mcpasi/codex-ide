@@ -8,6 +8,6 @@
   "entrypoint": "skills/codexIdeTutorSkill.js",
   "builtIn": true,
   "defaultEnabled": false,
-  "profiles": ["local", "api", "codex"],
+  "profiles": ["local", "api", "codex", "antigravity"],
   "permissions": []
 }

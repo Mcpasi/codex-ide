@@ -1,10 +1,11 @@
 /**
  * backendProfile.js – Ressourcen-Profil-Verwaltung für Codex IDE
  *
- * Steuert drei generative Betriebsmodi:
+ * Steuert vier generative Betriebsmodi:
  *   local    – Lokales Browser-LLM
  *   api      – Externe OpenAI-kompatible API
  *   codex    – Lokale Codex-CLI-Bridge mit ChatGPT/Codex-Login
+ *   antigravity – Persistente Antigravity CLI mit vorhandener Anmeldung
  */
  (function () {
   'use strict';
@@ -24,7 +25,7 @@
   var INTERNET_GOOGLE_CX_KEY = 'codexIdeInternetGoogleCx';
   var MODEL_MEMORY_KEY = 'codexIdeModelMemoryMarkdown';
   var DEFAULT_CODEX_BRIDGE_URL = 'http://localhost:8787';
-  var VALID_PROFILES = ['local', 'api', 'codex'];
+  var VALID_PROFILES = ['local', 'api', 'codex', 'antigravity'];
   var VALID_INTERNET_SEARCH_PROVIDERS = ['auto', 'google', 'fallback'];
   var VALID_CODEX_REASONING_EFFORTS = ['', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'];
   var DEFAULT_API_REPLY_TOKENS = 700;
@@ -40,6 +41,7 @@
   var _codexBridgeUrl = DEFAULT_CODEX_BRIDGE_URL;
   var _codexModel = '';
   var _codexReasoningEffort = '';
+  var _antigravityConfig = { url: DEFAULT_CODEX_BRIDGE_URL, model: '', reasoningEffort: '' };
   var _internetSkillEnabled = true;
   var _internetSearchProvider = 'auto';
   var _internetGoogleApiKey = '';
@@ -122,6 +124,14 @@
     _codexBridgeUrl = storageGet(CODEX_BRIDGE_URL_KEY, DEFAULT_CODEX_BRIDGE_URL);
     _codexModel = storageGet(CODEX_MODEL_KEY, '');
     _codexReasoningEffort = normalizeCodexReasoningEffort(storageGet(CODEX_REASONING_EFFORT_KEY, ''));
+    try {
+      var agy = JSON.parse(storageGet('codexIdeAntigravityConfig', '{}')) || {};
+      _antigravityConfig = {
+        url: typeof agy.url === 'string' && agy.url.trim() || DEFAULT_CODEX_BRIDGE_URL,
+        model: typeof agy.model === 'string' ? agy.model.trim() : '',
+        reasoningEffort: agy.reasoningEffort === 'ultra' ? '' : normalizeCodexReasoningEffort(agy.reasoningEffort)
+      };
+    } catch (_) { /* keep defaults for invalid saved settings */ }
     _internetSkillEnabled = normalizeBooleanSetting(storageGet(INTERNET_SKILL_ENABLED_KEY, 'true'), true);
     _internetSearchProvider = normalizeInternetSearchProvider(storageGet(INTERNET_SEARCH_PROVIDER_KEY, 'auto'));
     _internetGoogleApiKey = storageGet(INTERNET_GOOGLE_API_KEY_KEY, '');
@@ -136,6 +146,7 @@
     storageSet(CODEX_BRIDGE_URL_KEY, _codexBridgeUrl);
     storageSet(CODEX_MODEL_KEY, _codexModel);
     storageSet(CODEX_REASONING_EFFORT_KEY, _codexReasoningEffort);
+    storageSet('codexIdeAntigravityConfig', JSON.stringify(_antigravityConfig));
     storageSet(INTERNET_SKILL_ENABLED_KEY, _internetSkillEnabled ? 'true' : 'false');
     storageSet(INTERNET_SEARCH_PROVIDER_KEY, _internetSearchProvider);
     storageSet(INTERNET_GOOGLE_API_KEY_KEY, _internetGoogleApiKey);
@@ -173,6 +184,55 @@
     };
   }
 
+  // Both CLI providers use one editor, SSE decoder and persistence pipeline.
+  // Provider settings remain independent when switching backends.
+  function usesCli() { return _profile === 'codex' || _profile === 'antigravity'; }
+  function getCliConfig(provider) {
+    return (provider || _profile) === 'antigravity' ? Object.assign({}, _antigravityConfig) : getCodexConfig();
+  }
+  function setCliConfig(url, model) {
+    if (_profile !== 'antigravity') return setCodexConfig(url, model);
+    if (typeof url === 'string') _antigravityConfig.url = url.trim() || DEFAULT_CODEX_BRIDGE_URL;
+    if (typeof model === 'string') _antigravityConfig.model = model.trim();
+    _save(); notifyCodexConfigChange();
+  }
+  function setCliReasoningEffort(value) {
+    if (_profile !== 'antigravity') return setCodexReasoningEffort(value);
+    var effort = normalizeCodexReasoningEffort(value);
+    _antigravityConfig.reasoningEffort = effort === 'ultra' ? '' : effort;
+    _save(); notifyCodexConfigChange();
+  }
+  function getCliMaxTokens() {
+    return _profile === 'antigravity'
+      ? clampMaxTokens(storageGet('codexIdeAntigravityMaxTokens', ''), DEFAULT_API_REPLY_TOKENS) : getCodexMaxTokens();
+  }
+  function setCliMaxTokens(value) {
+    if (_profile !== 'antigravity') return setCodexMaxTokens(value);
+    storageSet('codexIdeAntigravityMaxTokens', String(clampMaxTokens(value, DEFAULT_API_REPLY_TOKENS)));
+  }
+  async function cliRequest(route, body) {
+    var config = getCliConfig();
+    var prefix = _profile === 'antigravity' ? '/antigravity' : '';
+    var resp = await fetch(normalizeCodexBridgeBaseUrl(config.url) + prefix + route, {
+      method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    if (!resp.ok) throw new Error('CLI Gateway ' + resp.status);
+    return resp.json();
+  }
+  async function cliBridgeStatus() {
+    return _profile === 'antigravity' ? cliRequest('/status') : codexBridgeStatus();
+  }
+  async function listCliModels() {
+    if (_profile !== 'antigravity') return listCodexModels();
+    var data = await cliRequest('/v1/models');
+    return data && Array.isArray(data.data) ? data.data : [];
+  }
+  async function resetCliSession(sessionId, threadId) {
+    return _profile === 'antigravity' ? cliRequest('/session/reset', { sessionId: sessionId, threadId: threadId })
+      : resetCodexSession(sessionId, threadId);
+  }
+
   function setCodexConfig(url, model) {
     if (typeof url === 'string') _codexBridgeUrl = url.trim() || DEFAULT_CODEX_BRIDGE_URL;
     if (typeof model === 'string') _codexModel = model.trim();
@@ -190,7 +250,7 @@
     if (typeof document === 'undefined' || typeof CustomEvent === 'undefined') return;
     try {
       document.dispatchEvent(new CustomEvent('codex-ide-config-change', {
-        detail: getCodexConfig()
+        detail: getCliConfig()
       }));
     } catch (_) { /* ignore */ }
   }
@@ -470,7 +530,7 @@
     var payload = { messages: messages };
     if (files.length > 0) payload.files = files;
     try {
-      var resp = await fetch(normalizeCodexBridgeBaseUrl(_codexBridgeUrl) + '/codex-ide/context', {
+      var resp = await fetch(normalizeCodexBridgeBaseUrl(getCliConfig().url) + '/codex-ide/context', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -1517,7 +1577,7 @@
    * Works with OpenRouter, OpenAI, Ollama, LM Studio, llama.cpp server, etc.
    */
    async function apiChatCompletion(messages, maxTokens, options) {
-    if (_profile === 'codex') return codexChatCompletion(messages, maxTokens, options);
+    if (usesCli()) return codexChatCompletion(messages, maxTokens, options, _profile);
     if (_profile === 'local') {
       if (typeof window === 'undefined' || !window.CodexIdeLocalModel ||
           typeof window.CodexIdeLocalModel.chatCompletion !== 'function') {
@@ -1759,15 +1819,17 @@
     }
   }
 
-  async function codexChatCompletion(messages, maxTokens, options) {
+  async function codexChatCompletion(messages, maxTokens, options, provider) {
     if (typeof fetch !== 'function') throw new Error('Fetch API nicht verfügbar');
     var opts = options || {};
+    provider = provider || 'codex';
+    var config = getCliConfig(provider);
     throwIfAborted(opts.signal);
     var cleanMessages = cleanApiMessages(messages);
     if (cleanMessages.length === 0) throw new Error('Keine Codex-Nachrichten vorhanden');
 
     var body = {
-      model: _codexModel || 'codex-cli',
+      model: config.model || (provider === 'antigravity' ? 'antigravity-cli' : 'codex-cli'),
       messages: cleanMessages,
       max_tokens: clampMaxTokens(maxTokens, 150, opts.editorWriteMode === true ? MAX_GENERATION_TOKENS : 1000),
       temperature: typeof opts.temperature === 'number' ? opts.temperature : 0.7,
@@ -1775,7 +1837,7 @@
       reasoning_effort: normalizeCodexReasoningEffort(
         Object.prototype.hasOwnProperty.call(opts, 'reasoningEffort')
           ? opts.reasoningEffort
-          : _codexReasoningEffort
+          : config.reasoningEffort
       )
     };
     if (opts.responseFormat) body.response_format = opts.responseFormat;
@@ -1803,7 +1865,10 @@
       body.codexIde = codexIdePayload;
     }
 
-    var resp = await fetch(normalizeCodexBridgeUrl(_codexBridgeUrl), {
+    var endpoint = provider === 'antigravity'
+      ? normalizeCodexBridgeBaseUrl(config.url) + '/antigravity/v1/chat/completions'
+      : normalizeCodexBridgeUrl(config.url);
+    var resp = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -1819,7 +1884,7 @@
           errText = errJson.error.message || errJson.error.code || errText;
         }
       } catch (_) { /* keep raw text */ }
-      throw new Error('Codex Bridge ' + resp.status + ': ' + errText.slice(0, 200));
+      throw new Error((provider === 'antigravity' ? 'Antigravity Bridge ' : 'Codex Bridge ') + resp.status + ': ' + errText.slice(0, 200));
     }
 
     var contentType = getResponseHeader(resp, 'content-type').toLowerCase();
@@ -1956,7 +2021,7 @@
     content = String(content == null ? '' : content);
     if (!content.trim()) throw new Error('Markdown-Inhalt fehlt');
 
-    var resp = await fetch(normalizeCodexBridgeBaseUrl(_codexBridgeUrl) + '/codex-ide/files', {
+    var resp = await fetch(normalizeCodexBridgeBaseUrl(getCliConfig().url) + '/codex-ide/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2000,7 +2065,7 @@
     var implicitIdeRead = opts.editorWorkspaceMode === true;
     var includeExtended = implicitIdeRead || availability.read === true;
     var implicitIdeWrite = opts.editorWorkspaceMode === true;
-    var resp = await fetch(normalizeCodexBridgeBaseUrl(_codexBridgeUrl) + '/codex-ide/workspace' + (includeExtended ? '?extended=1' : ''), {
+    var resp = await fetch(normalizeCodexBridgeBaseUrl(getCliConfig().url) + '/codex-ide/workspace' + (includeExtended ? '?extended=1' : ''), {
       method: 'GET',
       headers: implicitIdeRead
         ? { 'Accept': 'application/json', 'X-Codex-IDE-Workspace': 'model-home' }
@@ -2028,7 +2093,7 @@
     var path = normalizeIdeModelHomePath(requestedPath);
     var opts = options || {};
     if (opts.editorWorkspaceMode === true && isEditorWorkspaceFilePath(path)) {
-      var ideReadResp = await fetch(normalizeCodexBridgeBaseUrl(_codexBridgeUrl) + '/codex-ide/ide-files?path=' + encodeURIComponent(path), {
+      var ideReadResp = await fetch(normalizeCodexBridgeBaseUrl(getCliConfig().url) + '/codex-ide/ide-files?path=' + encodeURIComponent(path), {
         method: 'GET',
         headers: { 'Accept': 'application/json', 'X-Codex-IDE-Workspace': 'model-home' },
         signal: opts.signal
@@ -2042,7 +2107,7 @@
       return window.CodexIdeExtendedFileSkill.read(path, { signal: opts.signal });
     }
     if (!/\.(?:json|md|txt)$/i.test(path)) throw new Error('Dieser Dateityp kann in der IDE nicht gelesen werden');
-    var resp = await fetch(normalizeCodexBridgeBaseUrl(_codexBridgeUrl) + '/codex-ide/files?path=' + encodeURIComponent(path), {
+    var resp = await fetch(normalizeCodexBridgeBaseUrl(getCliConfig().url) + '/codex-ide/files?path=' + encodeURIComponent(path), {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
       signal: opts.signal
@@ -2056,7 +2121,7 @@
     var opts = options || {};
     var text = String(content == null ? '' : content).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     if (opts.editorWorkspaceMode === true && isEditorWorkspaceFilePath(path)) {
-      var ideResp = await fetch(normalizeCodexBridgeBaseUrl(_codexBridgeUrl) + '/codex-ide/ide-files', {
+      var ideResp = await fetch(normalizeCodexBridgeBaseUrl(getCliConfig().url) + '/codex-ide/ide-files', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2088,7 +2153,7 @@
       return window.CodexIdeExtendedFileSkill.write(path, text, { overwrite: opts.overwrite !== false, signal: opts.signal });
     }
     if (!/\.md$/i.test(path)) throw new Error('Ohne Datei-Skill kann die IDE nur .md-Dateien schreiben');
-    var resp = await fetch(normalizeCodexBridgeBaseUrl(_codexBridgeUrl) + '/codex-ide/files', {
+    var resp = await fetch(normalizeCodexBridgeBaseUrl(getCliConfig().url) + '/codex-ide/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: path, content: text, overwrite: opts.overwrite !== false }),
@@ -2102,7 +2167,7 @@
     var path = normalizeIdeModelHomePath(requestedPath);
     var opts = options || {};
     if (opts.editorWorkspaceMode === true) {
-      var ideResp = await fetch(normalizeCodexBridgeBaseUrl(_codexBridgeUrl) + '/codex-ide/ide-files', {
+      var ideResp = await fetch(normalizeCodexBridgeBaseUrl(getCliConfig().url) + '/codex-ide/ide-files', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2144,7 +2209,7 @@
     throwIfAborted(opts.signal);
     var internetSkillAvailable = await isInternetResearchSkillAvailable();
     var extendedFileAvailability = await getExtendedFileSkillAvailability();
-    var codexWorkspaceReadAvailable = opts.editorWorkspaceMode === true && _profile === 'codex';
+    var codexWorkspaceReadAvailable = opts.editorWorkspaceMode === true && usesCli();
     if (opts.editorWorkspaceMode === true) {
       extendedFileAvailability = {
         read: true,
@@ -2264,7 +2329,7 @@
  
     var maxTokens = DEFAULT_API_REPLY_TOKENS;
     try {
-      maxTokens = _profile === 'codex' ? getCodexMaxTokens() : getApiMaxTokens();
+      maxTokens = usesCli() ? getCliMaxTokens() : getApiMaxTokens();
     } catch (_) { /* ignore */ }
     var plannerMaxTokens = opts.editorWriteMode === true
       ? getEditorReplyTokens(userText, maxTokens)
@@ -2340,7 +2405,7 @@
     }
 
     function queueWorkspaceRuntimeEvent(event) {
-      if (opts.editorWorkspaceMode !== true || _profile !== 'codex' || !event) return;
+      if (opts.editorWorkspaceMode !== true || !usesCli() || !event) return;
       workspaceRuntimeEvents.push(event);
     }
 
@@ -2454,7 +2519,7 @@
 
     var completionOptions = {
       temperature: 0.7,
-      stream: _profile === 'codex' || typeof opts.onToken === 'function' || typeof opts.onEditorDraft === 'function',
+      stream: usesCli() || typeof opts.onToken === 'function' || typeof opts.onEditorDraft === 'function',
       modelHomeFiles: normalizeModelHomeFileList(opts.modelHomeFiles || opts.files || opts.uploadedFiles),
       sessionId: opts.sessionId || opts.session_id,
       codexThreadId: opts.codexThreadId || opts.threadId || opts.thread_id,
@@ -2464,7 +2529,7 @@
       responseLanguage: responseLanguage,
       reasoningEffort: Object.prototype.hasOwnProperty.call(opts, 'reasoningEffort')
         ? opts.reasoningEffort
-        : _codexReasoningEffort,
+        : getCliConfig().reasoningEffort,
       onToken: opts.onToken,
       onSkillStart: opts.onSkillStart,
       onToolEvent: opts.onToolEvent,
@@ -2599,14 +2664,14 @@
 
     async function prepareEditorStallRecovery() {
       if (opts.editorWorkspaceMode !== true) return null;
-      var staleEditorBuffer = _profile === 'codex' && editorRepairKind === 'stale-editor-edit';
+      var staleEditorBuffer = usesCli() && editorRepairKind === 'stale-editor-edit';
       if (!staleEditorBuffer && (editorRepairStallCount < 2 || editorRepairStallCount % 2 !== 0)) return null;
       var recoveryContext = await refreshWorkspaceForRecovery();
       var readRecoveryContext = formatWorkspaceReadRecoveryContext();
       if (readRecoveryContext) recoveryContext += '\n\n' + readRecoveryContext;
       return {
         context: recoveryContext,
-        resetSession: _profile === 'codex'
+        resetSession: usesCli()
       };
     }
 
@@ -2694,7 +2759,7 @@
             workspaceCompletionConfirmed = true;
             break;
           }
-          if (_profile === 'codex' && workspaceAuditRequiresAction) {
+          if (usesCli() && workspaceAuditRequiresAction) {
             if (workspaceOutputRepeatsInstructions(reply)) {
               workspaceAuditStallCount = 0;
               reply = await requestNextStructuredWorkspaceAction({
@@ -2731,7 +2796,7 @@
             reply = await guardedChatCompletion(workspaceFinalMessages, maxTokens, completionOptions);
             break;
           }
-          if (_profile === 'codex') {
+          if (usesCli()) {
             var structuredAuditMessages = messages.slice();
             structuredAuditMessages[0] = {
               role: 'system',
@@ -2865,7 +2930,7 @@
         continue;
       }
 
-      if (_profile === 'codex' && opts.editorWorkspaceMode === true && agentRequest.channel === 'editor' &&
+      if (usesCli() && opts.editorWorkspaceMode === true && agentRequest.channel === 'editor' &&
           skillResult.status === 'completed' && !editorActionPending &&
           ['edit', 'write', 'mkdir'].indexOf(agentRequest.operation) !== -1) {
         workspaceAuditRequiresAction = false;
@@ -2963,6 +3028,11 @@
     var chatModelSettings = document.getElementById('chatModelSettings');
     var apiSettings = document.getElementById('apiSettings');
     var codexSettings = document.getElementById('codexSettings');
+    var antigravitySettings = document.getElementById('antigravitySettings');
+    if (antigravitySettings) {
+      antigravitySettings.style.display = _profile === 'antigravity' ? '' : 'none';
+      if (_profile === 'antigravity') antigravitySettings.open = true;
+    }
     
     if (chatModelSettings) {
       chatModelSettings.style.display = (_profile === 'local') ? '' : 'none';
@@ -3025,6 +3095,15 @@
       needsLLM:           needsLLM,
       usesApi:            usesApi,
       usesCodex:          usesCodex,
+      usesCli:            usesCli,
+      getCliConfig:       getCliConfig,
+      setCliConfig:       setCliConfig,
+      setCliReasoningEffort: setCliReasoningEffort,
+      getCliMaxTokens:    getCliMaxTokens,
+      setCliMaxTokens:    setCliMaxTokens,
+      cliBridgeStatus:   cliBridgeStatus,
+      listCliModels:     listCliModels,
+      resetCliSession:   resetCliSession,
       getApiConfig:       getApiConfig,
       setApiConfig:       setApiConfig,
       getApiMaxTokens:    getApiMaxTokens,

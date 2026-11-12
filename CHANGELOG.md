@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased - Antigravity CLI backend
+
+- Add a modular Antigravity CLI adapter using the existing official sign-in and persistent JSON streaming. Keep provider configuration and conversation IDs independent, expose login/status commands, model selection and settings, and include the adapter in npm packages.
+- Reuse the visible editor, paint-before-save persistence, workspace readers, verification copies and recovery/audit pipeline. Extend delayed-stream, follow-up, Unicode, read-only-installation, HTTP, cancellation and performance reproductions to Antigravity. Advance the PWA shell cache/assets to `codex-ide-v49` and keep Antigravity API routes uncached.
+
 ## 1.3.2 - Consistent editor previews and saves
 
 - Keep the streaming preview bound to the first editor request in each model response, matching final dispatch. Additional blocks can no longer close an unsaved new file, rewrite its preview or force it to be animated again before saving. Add delayed-stream reproductions with real temporary-file persistence for repeated same-file blocks, different file targets and a later user turn editing the saved file. Preserve visible animation and paint-before-save checks; advance the PWA shell cache/assets to `codex-ide-v48`.

@@ -13,6 +13,7 @@
     "scripts/codex-ide-gateway.js",
     "scripts/codex-bridge.js",
     "scripts/codex-app-server-client.js",
+    "scripts/backends/**",
     "scripts/codex-workspace-policy.js",
     "scripts/codex-model-home.js",
     "scripts/codex-readonly-runner.c",
@@ -72,7 +73,7 @@
     "test": "jest --runInBand",
     "test:performance": "jest --runInBand test/performance.test.js",
     "test:coverage": "npm test -- --coverage",
-    "verify:syntax": "node -c backendProfile.js && node -c localModel.js && node -c skillSystem.js && node -c codex_ide/settings.js && node -c codex_ide/codex-ide.js && node -c codex_ide/editor-diff.js && node -c scripts/codex-bridge.js && node -c scripts/codex-app-server-client.js && node -c scripts/codex-workspace-policy.js && node -c scripts/codex-model-home.js && node -c scripts/codex-ide-gateway.js && node -c scripts/codex-ide-update.js && node -c scripts/codex-ide.js && cc -fsyntax-only scripts/codex-readonly-runner.c",
+    "verify:syntax": "node -c backendProfile.js && node -c localModel.js && node -c skillSystem.js && node -c codex_ide/settings.js && node -c codex_ide/codex-ide.js && node -c codex_ide/editor-diff.js && node -c scripts/codex-bridge.js && node -c scripts/codex-app-server-client.js && node -c scripts/backends/antigravity.js && node -c scripts/codex-workspace-policy.js && node -c scripts/codex-model-home.js && node -c scripts/codex-ide-gateway.js && node -c scripts/codex-ide-update.js && node -c scripts/codex-ide.js && cc -fsyntax-only scripts/codex-readonly-runner.c",
     "verify:release": "npm run verify:syntax && npm run pwa:validate && npm test -- --runInBand && npm pack --dry-run --ignore-scripts",
     "prepublishOnly": "npm run verify:release"
   },

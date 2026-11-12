@@ -91,6 +91,10 @@
       ['codexDailyUsageLabel', 'codexUsageDailyLabel', 'Täglich'], ['codexWeeklyUsageLabel', 'codexUsageWeeklyLabel', 'Wöchentlich'],
       ['codexBridgeUrlLabel', 'codexBridgeUrlLabel', 'Gateway-URL'], ['codexMaxTokensLabel', 'codexMaxTokensLabel', 'Max. Antwort-Tokens'],
       ['codexSaveBtn', 'codexSaveBtn', 'Speichern'], ['codexTestBtn', 'codexTestBtn', 'Gateway testen'], ['codexStatusBtn', 'codexStatusBtn', 'Status prüfen'],
+      ['antigravitySettingsHint', 'antigravitySettingsHint', 'Nutzt deine vorhandene Antigravity-Anmeldung. Änderungen erscheinen direkt im Editor und werden anschließend gespeichert.'],
+      ['antigravityCopyLoginBtn', 'codexCopyLoginBtn', 'Login-Befehl kopieren'], ['antigravityCopyStatusBtn', 'codexCopyStatusBtn', 'Status-Befehl kopieren'],
+      ['antigravityBridgeUrlLabel', 'codexBridgeUrlLabel', 'Gateway-URL'], ['antigravityMaxTokensLabel', 'codexMaxTokensLabel', 'Max. Antwort-Tokens'],
+      ['antigravitySaveBtn', 'codexSaveBtn', 'Speichern'], ['antigravityTestBtn', 'codexTestBtn', 'Gateway testen'], ['antigravityStatusBtn', 'codexStatusBtn', 'Status prüfen'],
       ['skillSettingsTitle', 'skillSettingsTitle', 'Skills'], ['skillSettingsIntro', 'skillSettingsIntro', 'Verwalte Skills direkt in der IDE.'],
       ['skillInstallTitle', 'skillInstallTitle', 'Skill installieren'], ['skillRuntimeWarning', 'skillRuntimeWarning', 'Installiere nur vertrauenswürdige Quellen.'],
       ['skillManifestUrlLabel', 'skillManifestUrlLabel', 'Manifest-URL'], ['skillInstallFromUrlBtn', 'skillInstallFromUrl', 'Von URL installieren'],
@@ -102,7 +106,7 @@
       var select = byId(id);
       if (!select) return;
       Array.prototype.forEach.call(select.options, function (option) {
-        var keys = { local: 'skillProfileLocal', api: 'skillProfileApi', codex: 'skillProfileCodex' };
+        var keys = { local: 'skillProfileLocal', api: 'skillProfileApi', codex: 'skillProfileCodex', antigravity: 'skillProfileAntigravity' };
         option.textContent = t(keys[option.value], option.textContent);
       });
     });
@@ -184,11 +188,17 @@
   function syncProfileUi() {
     var profile = window.codexIdeProfile.get();
     ['ideBackend', 'settingsBackend'].forEach(function (id) { if (byId(id)) byId(id).value = profile; });
-    if (byId('ideModelControl')) byId('ideModelControl').hidden = profile !== 'codex';
-    if (byId('ideReasoningControl')) byId('ideReasoningControl').hidden = profile !== 'codex';
+    if (byId('ideModelControl')) byId('ideModelControl').hidden = profile !== 'codex' && profile !== 'antigravity';
+    if (byId('ideReasoningControl')) byId('ideReasoningControl').hidden = profile !== 'codex' && profile !== 'antigravity';
     if (byId('localSettings')) byId('localSettings').open = profile === 'local';
     if (byId('apiSettings')) byId('apiSettings').open = profile === 'api';
     if (byId('codexSettings')) byId('codexSettings').open = profile === 'codex';
+    if (byId('antigravitySettings')) byId('antigravitySettings').open = profile === 'antigravity';
+    if (profile === 'antigravity') {
+      var agy = window.codexIdeProfile.getCliConfig();
+      byId('antigravityBridgeUrlInput').value = agy.url;
+      byId('antigravityMaxTokensInput').value = window.codexIdeProfile.getCliMaxTokens();
+    }
     var api = window.codexIdeProfile.getApiConfig();
     if (byId('codexIdeApiUrlInput')) byId('codexIdeApiUrlInput').value = api.url || '';
     if (byId('codexIdeApiKeyInput')) byId('codexIdeApiKeyInput').value = api.key || '';
@@ -200,7 +210,7 @@
   }
 
   function selectProfile(value) {
-    if (!/^(local|api|codex)$/.test(value)) return;
+    if (!/^(local|api|codex|antigravity)$/.test(value)) return;
     var changed = window.codexIdeProfile.get() !== value;
     window.codexIdeProfile.set(value);
     syncProfileUi();
@@ -259,6 +269,24 @@
       }
     } catch (error) {
       setStatus('codexStatusText', t('codexErrorStatusPrefix', 'Fehler: ') + String(error && error.message || error).slice(0, 160), true);
+    }
+  }
+  function saveAntigravity() {
+    var config = window.codexIdeProfile.getCliConfig('antigravity');
+    window.codexIdeProfile.setCliConfig(byId('antigravityBridgeUrlInput').value, config.model);
+    window.codexIdeProfile.setCliMaxTokens(byId('antigravityMaxTokensInput').value);
+    setStatus('antigravityStatusText', t('codexSavedStatus', 'Gespeichert'));
+  }
+  async function checkAntigravity(test) {
+    saveAntigravity();
+    setStatus('antigravityStatusText', t('codexStatusChecking', 'Prüfe Status …'));
+    try {
+      if (test) await window.codexIdeProfile.apiChatCompletion([{ role: 'user', content: 'Reply only with OK.' }], 20, { stream: false, sessionId: 'antigravity-connection-test' });
+      var status = await window.codexIdeProfile.cliBridgeStatus();
+      setStatus('antigravityStatusText', status.loggedIn ? t('antigravityReady', 'Gateway und Antigravity sind bereit.')
+        : t('antigravityLoginRequired', 'Gateway erreichbar; Antigravity-Anmeldung fehlt.'), !status.loggedIn);
+    } catch (error) {
+      setStatus('antigravityStatusText', String(error && error.message || error).slice(0, 180), true);
     }
   }
   async function copyCodexCommand(command) {
@@ -462,6 +490,11 @@
     byId('codexCopyLoginBtn').addEventListener('click', function () { copyCodexCommand('codex-ide codex login'); });
     byId('codexCopyDeviceLoginBtn').addEventListener('click', function () { copyCodexCommand('codex-ide codex login --device-auth'); });
     byId('codexCopyStatusBtn').addEventListener('click', function () { copyCodexCommand('codex-ide codex status'); });
+    byId('antigravitySaveBtn').addEventListener('click', saveAntigravity);
+    byId('antigravityStatusBtn').addEventListener('click', function () { checkAntigravity(false); });
+    byId('antigravityTestBtn').addEventListener('click', function () { checkAntigravity(true); });
+    byId('antigravityCopyLoginBtn').addEventListener('click', function () { copyCodexCommand('codex-ide antigravity login'); });
+    byId('antigravityCopyStatusBtn').addEventListener('click', function () { copyCodexCommand('codex-ide antigravity status'); });
     byId('reloadChatModelBtn').addEventListener('click', loadLocalModel);
     byId('llmEnabledToggle').addEventListener('change', function () { if (window.CodexIdeLocalModel) window.CodexIdeLocalModel.setEnabled(this.checked); });
     byId('llmMaxTokensInput').addEventListener('change', function () { if (window.CodexIdeLocalModel) window.CodexIdeLocalModel.setMaxTokens(this.value); });

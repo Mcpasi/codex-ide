@@ -20,7 +20,8 @@
     "profiles": [
       "local",
       "api",
-      "codex"
+      "codex",
+      "antigravity"
     ],
     "permissions": [
       {

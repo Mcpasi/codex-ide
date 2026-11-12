@@ -9,7 +9,7 @@ const { createEditor } = require('./helpers/editor');
 // Unix permission bits reproduce the npm installation failure without mocking fs.
 const permissionTest = process.platform !== 'win32' && process.getuid() !== 0 ? test : test.skip;
 
-describe('editor persistence from a read-only npm installation', () => {
+describe.each(['codex', 'antigravity'])('%s editor persistence from a read-only npm installation', provider => {
   let fixture;
   let packageRoot;
   let legacyHome;
@@ -79,7 +79,8 @@ describe('editor persistence from a read-only npm installation', () => {
   function connectEditor() {
     const editor = createEditor();
     editor.browser.load('backendProfile.js');
-    editor.browser.window.codexIdeProfile.setCodexConfig(baseUrl);
+    editor.browser.window.codexIdeProfile.set(provider);
+    editor.browser.window.codexIdeProfile.setCliConfig(baseUrl);
     editor.browser.context.fetch.mockImplementation((...args) => fetch(...args));
     return editor;
   }

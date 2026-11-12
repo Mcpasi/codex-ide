@@ -8,7 +8,7 @@
   "entrypoint": "skills/internetSkill.js",
   "builtIn": true,
   "defaultEnabled": true,
-  "profiles": ["local", "api", "codex"],
+  "profiles": ["local", "api", "codex", "antigravity"],
   "permissions": [
     { "id": "network", "labelKey": "skillPermissionNetwork", "descriptionKey": "skillPermissionNetworkDescription", "required": true, "defaultGranted": true },
     { "id": "credentials", "labelKey": "skillPermissionCredentials", "descriptionKey": "skillPermissionCredentialsDescription", "required": false, "defaultGranted": false }

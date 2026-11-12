@@ -2,7 +2,7 @@
 
 ## Systemuebersicht
 
-Codex IDE wird als eine einzige Browseranwendung ausgeliefert. `index.html` laedt direkt die IDE, ihre Einstellungen und die drei Backend-Adapter. Das lokale Gateway stellt die statische App-Shell, den Modell-Home-Zugriff und die Codex-App-Server-Bridge auf demselben Loopback-Ursprung bereit.
+Codex IDE wird als eine einzige Browseranwendung ausgeliefert. `index.html` laedt direkt die IDE, ihre Einstellungen und die vier Backend-Profile. Das lokale Gateway stellt die statische App-Shell, den Modell-Home-Zugriff, Codex App Server und Antigravity CLI auf demselben Loopback-Ursprung bereit.
 
 ## Oberflaeche und Markenbild
 
@@ -42,6 +42,8 @@ codex-ide update --yes
 codex-ide codex login
 codex-ide codex login --device-auth
 codex-ide codex status
+codex-ide antigravity login
+codex-ide antigravity status
 codex-ide skill validate <ordner>
 codex-ide skill pack <ordner> [ausgabe.codexskill]
 ```
@@ -62,13 +64,24 @@ Der aktive Nutzer-Workspace liegt außerhalb des npm-Pakets und bleibt bei desse
 
 ## Backend-Dispatch
 
-`backendProfile.js` verwaltet genau drei Werte:
+`backendProfile.js` verwaltet vier Werte:
 
 - `local`: delegiert Chat-Completions an `window.CodexIdeLocalModel`.
 - `api`: ruft einen konfigurierten OpenAI-kompatiblen Endpoint auf.
 - `codex`: ruft das lokale Gateway auf und uebergibt Sitzungs-, Editor-, Sprach-, Modell- und Reasoning-Metadaten.
+- `antigravity`: nutzt `/antigravity/v1/chat/completions` mit denselben Editor-, SSE-, Recovery- und Speicherfunktionen. Konfiguration und Conversation-ID bleiben unabhaengig von Codex.
 
-Alle drei Backends verwenden denselben Agentenloop, dieselben Steuerbloecke, dieselbe Skill-Registry und dieselben Editor-Callbacks. Nur Transport und modellseitiger Workspace-Leseweg unterscheiden sich.
+Alle Backends verwenden denselben Agentenloop, dieselben Steuerbloecke, dieselbe Skill-Registry und dieselben Editor-Callbacks. Nur Transport und modellseitiger Workspace-Leseweg unterscheiden sich.
+
+### Antigravity CLI
+
+`scripts/backends/antigravity.js` kapselt Auth-Probe, Modellkatalog, Prozessverwaltung und das [offizielle persistente NDJSON-Protokoll](https://antigravity.google/docs/cli/headless/). Die CLI (`agy`, alternativ `ANTIGRAVITY_BIN`) behaelt ihre vorhandenen Anmeldedaten selbst; die IDE liest keine OAuth-Dateien. `codex-ide antigravity login` delegiert an den [offiziellen Terminal-Login](https://antigravity.google/docs/ide/extensions/acp), `status` prueft mit `--print /usage --output-format json` ohne Modellgenerierung.
+
+Pro Agentensitzung bleibt ein CLI-Prozess offen. Folgeschritte und Audits werden ueber stdin geschickt; das `result`-Event beendet den jeweiligen Schritt ohne Warten auf Prozessende. Modell- oder Reasoningwechsel bauen den Prozess mit derselben Conversation-ID neu auf. Abbruch, Reset und Gateway-Ende beenden betroffene Prozesse; ein abgebrochener oder defekter Prozess wird nicht mit einem alten Reststream weiterverwendet. NDJSON und UTF-8 werden inkrementell dekodiert, terminale Fehler werden als Fehler gemeldet und fertige Antworten nicht doppelt gestreamt.
+
+Die CLI erhaelt temporaere `--settings` mit [Deny-Regeln](https://antigravity.google/docs/settings?tab=cli) fuer native Schreib-, Shell-, MCP- und Netzwerkwege. Das beschraenkt nicht die sichtbare Editorarbeit: Lesen und Auflisten nutzen dieselben Workspace-Funktionen wie Codex, jede Textaenderung wird im echten Editor animiert und erst danach gespeichert. Interne `codex_ide_workspace_request`-Bloecke verbinden Lesezugriffe und Pruefbefehle mit den vorhandenen Laufzeitfunktionen und Live-Ereignissen; sie werden nicht als Chattext ausgegeben. Pruefbefehle arbeiten auf der Wegwerfkopie. Externe Skills verwenden weiterhin ihre expliziten Freigaben.
+
+Die Routen `/antigravity/status`, `/antigravity/v1/models`, `/antigravity/v1/chat/completions`, `/antigravity/sessions` und `/antigravity/session/reset` unterliegen den bestehenden Host-/Origin-Pruefungen und werden vom Service Worker nicht gecacht. Die gemeinsamen Datei-Routen bleiben `/codex-ide/*`.
 
 Beim lokalen Modell gilt ein per Aufruf gesetztes Tokenbudget nur fuer diese Generierung und veraendert das gespeicherte Nutzerlimit nicht. Im Codex-Profil bleiben `low`, `medium`, `high`, `xhigh`, `max` und `ultra` im Modellkatalog erhalten; die IDE bietet fuer das aktuelle Modell nur dessen gemeldete `supported_reasoning_efforts` an.
 

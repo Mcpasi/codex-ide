@@ -105,6 +105,7 @@ function startGateway(options = {}) {
       logger.log(`[codex-ide-gateway] Modell-Home: ${getModelHomeDir(options)}`);
       logger.log('[codex-ide-gateway] Codex nutzt standardmaessig den persistenten Codex App Server; Legacy: CODEX_BRIDGE_ENGINE=exec.');
       logger.log('[codex-ide-gateway] Auth laeuft ueber die lokal eingeloggte Codex-CLI. Login: codex-ide codex login');
+      logger.log('[codex-ide-gateway] Antigravity CLI: codex-ide antigravity login; vorhandene agy-Anmeldung wird uebernommen.');
     }
     if (options.openIde) {
       const opened = openUrl(ideUrl, options);

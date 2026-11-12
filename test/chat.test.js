@@ -42,6 +42,26 @@ describe('chat input and persisted conversation', () => {
     expect(session.history).toEqual([{ user: instruction, reply: 'Geprüft.' }]);
   });
 
+  test('keeps Codex and Antigravity conversation IDs independent across backend switches and persistence', async () => {
+    session.codexThreadId = 'codex-thread';
+    session.antigravityThreadId = 'agy-thread';
+    editor.profile.get = () => 'antigravity';
+    editor.node('idePrompt').value = 'Pruefe Antigravity';
+    editor.profile.apiGenerateReply = jest.fn(async (_prompt, options) => {
+      expect(options.codexThreadId).toBe('agy-thread');
+      options.onSessionMetadata({ threadId: 'agy-updated', workspaceToolVersion: 3 });
+      return '<codex_ide_final>Geprueft.</codex_ide_final>';
+    });
+    await editor.runAgent();
+    expect(session.codexThreadId).toBe('codex-thread');
+    expect(session.antigravityThreadId).toBe('agy-updated');
+    editor.persistAgentSessions();
+    const restored = createEditor();
+    restored.browser.values.set('codexIdeAgentSessionsV1', editor.browser.values.get('codexIdeAgentSessionsV1'));
+    await restored.initializeAgentSessions();
+    expect(restored.state.sessions[0]).toMatchObject({ codexThreadId: 'codex-thread', antigravityThreadId: 'agy-updated' });
+  });
+
   test.each([
     ['plain HTML', '<main>Grüße 👋</main>', '<main>Grüße 👋</main>'],
     ['tagged comparison', '<codex_ide_final>Prüfe x < 5.', 'Prüfe x < 5.']

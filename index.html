@@ -14,17 +14,17 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" sizes="192x192" href="codex_ide_icon_192.png">
   <link rel="apple-touch-icon" href="codex_ide_icon_192.png">
-  <link rel="stylesheet" href="codex_ide/codex-ide.css?v=48">
-  <script src="skillSystem.js?v=48"></script>
-  <script src="agentResponse.js?v=48"></script>
-  <script src="codex_ide/syntax-highlighter.js?v=48"></script>
-  <script src="codex_ide/editor-diff.js?v=48"></script>
-  <script src="backendProfile.js?v=48"></script>
-  <script src="Safetyfilter.js?v=48"></script>
-  <script src="localModel.js?v=48"></script>
-  <script src="translations/de.js?v=48"></script>
-  <script src="translations/en.js?v=48"></script>
-  <script src="translations/fr.js?v=48"></script>
+  <link rel="stylesheet" href="codex_ide/codex-ide.css?v=49">
+  <script src="skillSystem.js?v=49"></script>
+  <script src="agentResponse.js?v=49"></script>
+  <script src="codex_ide/syntax-highlighter.js?v=49"></script>
+  <script src="codex_ide/editor-diff.js?v=49"></script>
+  <script src="backendProfile.js?v=49"></script>
+  <script src="Safetyfilter.js?v=49"></script>
+  <script src="localModel.js?v=49"></script>
+  <script src="translations/de.js?v=49"></script>
+  <script src="translations/en.js?v=49"></script>
+  <script src="translations/fr.js?v=49"></script>
 </head>
 <body>
   <main class="ide-shell">
@@ -34,7 +34,7 @@
         <div><h1 id="ideTitle">Codex IDE</h1><p id="ideScope">Dein Agent bei der Arbeit — jede Änderung live.</p></div>
       </div>
       <div class="ide-controls">
-        <label><span id="ideBackendLabel">Backend</span><select id="ideBackend"><option value="local">Lokal</option><option value="api">API</option><option value="codex">Codex Auth-Bridge</option></select></label>
+        <label><span id="ideBackendLabel">Backend</span><select id="ideBackend"><option value="local">Lokal</option><option value="api">API</option><option value="codex">Codex Auth-Bridge</option><option value="antigravity">Antigravity CLI</option></select></label>
         <label id="ideModelControl"><span id="ideModelLabel">Codex-Modell</span><select id="ideModel"><option value="">Codex-Standard</option></select></label>
         <label id="ideReasoningControl"><span id="ideReasoningLabel">Denkstufe</span><select id="ideReasoning"><option value="">Aus (Codex-Standard)</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="xhigh">Extra High</option><option value="max">Max</option><option value="ultra">Ultra</option></select></label>
         <div class="language-switcher" aria-labelledby="ideLanguageLabel">
@@ -113,7 +113,7 @@
         <details open>
           <summary id="backendSettingsTitle">Generatives Backend</summary>
           <div class="settings-section-body">
-            <label class="settings-field"><span id="backendSettingsLabel">Backend</span><select id="settingsBackend"><option value="local">Lokal</option><option value="api">API</option><option value="codex">Codex Auth-Bridge</option></select></label>
+            <label class="settings-field"><span id="backendSettingsLabel">Backend</span><select id="settingsBackend"><option value="local">Lokal</option><option value="api">API</option><option value="codex">Codex Auth-Bridge</option><option value="antigravity">Antigravity CLI</option></select></label>
             <p id="backendSettingsHint" class="settings-hint">Der Workspace bleibt lokal; nur die Modellerzeugung wechselt.</p>
           </div>
         </details>
@@ -175,6 +175,18 @@
           </div>
         </details>
 
+        <details id="antigravitySettings">
+          <summary id="antigravitySettingsTitle">Antigravity CLI</summary>
+          <div class="settings-section-body">
+            <p id="antigravitySettingsHint" class="settings-hint">Nutzt deine vorhandene Antigravity-Anmeldung. Änderungen erscheinen direkt im Editor und werden anschließend gespeichert.</p>
+            <div class="codex-command-row"><code>codex-ide antigravity login</code><button id="antigravityCopyLoginBtn" type="button">Login-Befehl kopieren</button></div>
+            <div class="codex-command-row"><code>codex-ide antigravity status</code><button id="antigravityCopyStatusBtn" type="button">Status-Befehl kopieren</button></div>
+            <label class="settings-field"><span id="antigravityBridgeUrlLabel">Gateway-URL</span><input id="antigravityBridgeUrlInput" type="url" autocomplete="off" value="http://localhost:8787"></label>
+            <label class="settings-field"><span id="antigravityMaxTokensLabel">Max. Antwort-Tokens</span><input id="antigravityMaxTokensInput" type="number" min="50" max="32768" value="700"></label>
+            <div class="settings-actions"><button id="antigravitySaveBtn" type="button">Speichern</button><button id="antigravityTestBtn" type="button">Gateway testen</button><button id="antigravityStatusBtn" type="button">Status prüfen</button><span id="antigravityStatusText" class="settings-note" role="status" aria-live="polite"></span></div>
+          </div>
+        </details>
+
         <details id="skillSettings" open>
           <summary id="skillSettingsTitle">Skills</summary>
           <div class="settings-section-body">
@@ -194,7 +206,7 @@
     </section>
   </div>
 
-  <script src="codex_ide/settings.js?v=48" defer></script>
-  <script src="codex_ide/codex-ide.js?v=48" defer></script>
+  <script src="codex_ide/settings.js?v=49" defer></script>
+  <script src="codex_ide/codex-ide.js?v=49" defer></script>
 </body>
 </html>

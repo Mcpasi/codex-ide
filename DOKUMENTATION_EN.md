@@ -2,7 +2,7 @@
 
 ## Overview
 
-Codex IDE ships as one browser application. `index.html` loads the IDE, its settings, and three backend adapters directly. The local gateway serves the static application shell, model-home policy, and Codex App Server bridge from the same loopback origin.
+Codex IDE ships as one browser application. `index.html` loads the IDE, its settings, and four backend profiles directly. The local gateway serves the static application shell, model-home policy, Codex App Server and Antigravity CLI from the same loopback origin.
 
 ## Interface and visual identity
 
@@ -34,6 +34,8 @@ codex-ide update
 codex-ide update --yes
 codex-ide codex login
 codex-ide codex status
+codex-ide antigravity login
+codex-ide antigravity status
 codex-ide skill validate <directory>
 codex-ide skill pack <directory> [output.codexskill]
 ```
@@ -50,13 +52,24 @@ The active user workspace lives outside the npm package and survives its replace
 
 ## Backend dispatch
 
-`backendProfile.js` supports exactly three values:
+`backendProfile.js` supports four values:
 
 - `local`: calls `window.CodexIdeLocalModel`.
 - `api`: calls a configured OpenAI-compatible chat-completions endpoint.
 - `codex`: calls the local gateway with session, editor, language, model, and reasoning metadata.
+- `antigravity`: calls `/antigravity/v1/chat/completions` using the same editor, SSE, recovery and persistence pipeline. Configuration and conversation IDs remain independent of Codex.
 
 All modes share the agent loop, control blocks, skill registry, and editor callbacks. Only their transport and model-side workspace read mechanism differ.
+
+### Antigravity CLI
+
+`scripts/backends/antigravity.js` owns authentication probes, model discovery and persistent process management through the [official NDJSON protocol](https://antigravity.google/docs/cli/headless/). It launches `agy` (or `ANTIGRAVITY_BIN`) and leaves credentials and provider communication inside the official CLI. Login delegates to `agy acp --login`; the status probe uses `--print /usage --output-format json` without generating a model response. See the [official authentication guide](https://antigravity.google/docs/ide/extensions/acp).
+
+One process stays open per session across planner, editor, audit and follow-up steps. Each `result` event completes its turn without waiting for process exit. Cancellation, reset and gateway shutdown stop the relevant processes. Model or effort changes resume the same conversation in a new process; aborted or failed processes start fresh. Incremental UTF-8/NDJSON parsing preserves fragmented Unicode and avoids repeatedly scanning a growing line. Final response envelopes do not duplicate already streamed text.
+
+Session-only `--settings` deny native writes, shell commands, MCP and network tools according to the [official permission format](https://antigravity.google/docs/settings?tab=cli). The visible editor retains full workspace editing and automatic saving. Internal `codex_ide_workspace_request` blocks connect reads, listings and verification commands to the existing workspace handlers and live console events. Verification runs on disposable workspace copies. External browser skills retain their explicit permissions.
+
+The routes `/antigravity/status`, `/antigravity/v1/models`, `/antigravity/v1/chat/completions`, `/antigravity/sessions` and `/antigravity/session/reset` use the existing host/origin checks and bypass service worker caches. Shared file routes remain under `/codex-ide/*`.
 
 For the local model, a per-call token budget applies only to that generation and never changes the saved user limit. In the Codex profile, `low`, `medium`, `high`, `xhigh`, `max`, and `ultra` survive model-catalog transport; the IDE offers only the selected model's advertised `supported_reasoning_efforts`.
 

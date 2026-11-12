@@ -98,7 +98,7 @@ describe('PWA assets and service worker behavior', () => {
     expect(worker.self.clients.matchAll).not.toHaveBeenCalled();
   });
 
-  test.each(['/health', '/gateway/status', '/codex/status', '/codex/usage', '/v1/models', '/v1/chat/completions', '/codex-ide/ide-files', '/codex-ide/preview/page.html'])
+  test.each(['/health', '/gateway/status', '/antigravity/status', '/antigravity/v1/models', '/antigravity/v1/chat/completions', '/antigravity/session/reset', '/codex/status', '/codex/usage', '/v1/models', '/v1/chat/completions', '/codex-ide/ide-files', '/codex-ide/preview/page.html'])
     ('always fetches a fresh gateway response for %s', async route => {
       const worker = createWorker();
       const result = await worker.request(route).response;

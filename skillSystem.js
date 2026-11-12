@@ -8,8 +8,8 @@
     'skills/extended-files/manifest.json',
     'skills/codex-ide-tutor/manifest.json'
   ];
-  var VALID_PROFILES = ['local', 'api', 'codex'];
-  var AGENT_PROFILES = ['local', 'api', 'codex'];
+  var VALID_PROFILES = ['local', 'api', 'codex', 'antigravity'];
+  var AGENT_PROFILES = ['local', 'api', 'codex', 'antigravity'];
   var VALID_SETUP_TYPES = ['text', 'password', 'select'];
   var VALID_PARAMETER_TYPES = ['string', 'number', 'boolean'];
   var LOCAL_PACKAGE_VERSION = 1;
@@ -420,7 +420,7 @@
   }
 
   function hasContextPermissions(manifest, state, profile, context) {
-    if (!context || context.editorWorkspaceMode !== true || profile !== 'codex') return true;
+    if (!context || context.editorWorkspaceMode !== true || (profile !== 'codex' && profile !== 'antigravity')) return true;
     var declaresNetwork = manifest.permissions.some(function (permission) { return permission.id === 'network'; });
     return !declaresNetwork || state.permissions.network === true;
   }

@@ -6,8 +6,9 @@
   var MAX_PDF_BYTES = 5 * 1024 * 1024;
 
   function bridgeBaseUrl() {
-    var url = window.codexIdeProfile && typeof window.codexIdeProfile.getCodexConfig === 'function'
-      ? window.codexIdeProfile.getCodexConfig().url
+    var profile = window.codexIdeProfile;
+    var url = profile && typeof (profile.getCliConfig || profile.getCodexConfig) === 'function'
+      ? (profile.getCliConfig || profile.getCodexConfig)().url
       : 'http://localhost:8787';
     return String(url || 'http://localhost:8787')
       .replace(/\/+$/, '')

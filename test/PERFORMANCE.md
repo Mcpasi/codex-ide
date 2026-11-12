@@ -4,7 +4,7 @@
 npm run test:performance
 ```
 
-Der Befehl führt sechs Regressionstests aus und gibt die Messwerte als JSON aus.
+Der Befehl führt acht Regressionstests aus und gibt die Messwerte als JSON aus.
 Dieselben Tests laufen mit `npm test` und damit auch im Release-Check. Für
 Messwerte bei einem normalen Testlauf kann `CODEX_IDE_PERF_REPORT=1` gesetzt
 werden. Es sind keine Anmeldung, Modellaufrufe oder externen Dienste nötig.
@@ -17,6 +17,7 @@ werden. Es sind keine Anmeldung, Modellaufrufe oder externen Dienste nötig.
 | Fragmentiertes SSE | 420.064 UTF-8-Bytes eines großen Events in 31-Byte-Netzwerkstücken; unter 750 ms, vollständiger Unicode-Inhalt und genau ein Token-Callback |
 | Planer → Editor | Echter Browser-Backendpfad mit 87.000 Inhaltszeichen und 1.502 Token-Events, anschließend Editorübergabe, Audit und Finalantwort; erste Vorschau unter 250 ms, Verarbeitung insgesamt unter 1.000 ms |
 | Persistenter App Server | Zehn simulierte Turns; Tokens kommen vor Turn-Ende, nur ein Prozess, eine Initialisierung und ein Thread-Start, keine erneute Thread-Wiederaufnahme; alle Starts und Turns behalten die Live-Editor-Berechtigungen |
+| Persistente Antigravity CLI | Zehn simulierte Planer-/Audit-/Folgeschritte in weniger als 1.000 ms; genau ein Prozess trotz wechselnder Audit-Anforderungen, NDJSON-Streaming und keine doppelte finale Ausgabe |
 | Sichtbare Bearbeitung | 16 Zeichen je simuliertem Token im Abstand von 17 ms; erste Syntaxanzeige spätestens nach 119 ms, vollständige kleine Datei mit Speicherung unter 650 ms; kein Schreiben vor der letzten sichtbaren Syntaxanzeige |
 | Fünf Speicherungen | Fünf kleine Dateien in verschachtelten Ordnern; keine vollständige Workspace-Abfrage pro Speicherung, Dateibaum und Elternordner sofort aktuell; unter 1.800 ms simulierter Zeit |
 
@@ -75,3 +76,5 @@ Symlink- und Schreibschutztests gehören zur vollständigen Suite. Zusätzlich
 prüft `editor-stream.test.js` mehrere echte Planerantworten über fragmentiertes
 SSE, den sichtbaren Editor, die Persistenz in temporäre Dateien und den
 Vollständigkeits-Audit in einem zusammenhängenden Ablauf.
+
+Der Planer-Test und die verzögerten Editor-Streaming-Reproduktionen laufen fuer Codex und Antigravity. `antigravity.test.js` prueft zusaetzlich einen grossen NDJSON-Datensatz mit byteweise fragmentiertem UTF-8 (Budget 3.000 ms). `antigravity-gateway.test.js` verbindet den echten Provideradapter, HTTP/SSE, Editorframes und temporaere Dateien. Dabei bleibt nur der CLI-Prozess simuliert; Auth und Modellantwortzeit sind kein Bestandteil der deterministischen Budgets.

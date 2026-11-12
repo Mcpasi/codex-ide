@@ -1,6 +1,13 @@
 (function () {
   window.CodexIdeLocales = window.CodexIdeLocales || {};
   window.CodexIdeLocales.de = { ui: {
+    skillProfileAntigravity: "Antigravity CLI",
+    antigravityDefaultModel: "Antigravity-Standard",
+    antigravityModelLabel: "Antigravity-Modell",
+    antigravityReady: "Gateway und Antigravity sind bereit.",
+    antigravityLoginRequired: "Gateway erreichbar; Antigravity-Anmeldung fehlt.",
+    antigravitySettingsHint: "Nutzt deine vorhandene Antigravity-Anmeldung. Änderungen erscheinen direkt im Editor und werden anschließend gespeichert.",
+
     agentPromptLabel: 'Nachricht an den Agenten', agentPromptHint: 'Enter zum Senden · Shift+Enter für eine neue Zeile',
     agentThoughtTitle: 'Denkschritt', agentToolTitle: 'Werkzeug',
     agentActivityRunning: 'Läuft …', agentActivityComplete: 'Abgeschlossen', agentActivityStopped: 'Gestoppt', agentActivityError: 'Fehlgeschlagen', agentActivityBlocked: 'Blockiert', agentActivityWaiting: 'Wartet',

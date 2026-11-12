@@ -39,7 +39,7 @@ describe('browser backend profiles', () => {
     fetch = browser.context.fetch;
   });
 
-  test.each(['local', 'api', 'codex'])('persists the %s profile and updates its capabilities', value => {
+  test.each(['local', 'api', 'codex', 'antigravity'])('persists the %s profile and updates its capabilities', value => {
     profile.set(value);
     expect(profile.get()).toBe(value);
     expect(profile.needsTransformers()).toBe(value === 'local');
@@ -73,6 +73,32 @@ describe('browser backend profiles', () => {
     profile.setCodexMaxTokens(0);
     expect(profile.getApiMaxTokens()).toBe(1000);
     expect(profile.getCodexMaxTokens()).toBe(700);
+  });
+
+  test('keeps Antigravity configuration separate and routes model, auth and save calls to its gateway', async () => {
+    profile.setCodexConfig('http://localhost:9000', 'codex-test');
+    profile.setCodexReasoningEffort('ultra');
+    profile.set('antigravity');
+    profile.setCliConfig(' http://localhost:9100/ ', 'gemini-test');
+    profile.setCliReasoningEffort('max');
+    profile.setCliMaxTokens(900);
+    fetch.mockResolvedValue(jsonResponse({ loggedIn: true, data: [], ok: true, choices: [{ message: { content: 'OK' } }] }));
+    await profile.cliBridgeStatus(); await profile.listCliModels();
+    await profile.apiChatCompletion([{ role: 'user', content: 'hello' }], 900, { stream: false });
+    await profile.writeModelHomeWorkspaceFile('src/a.ts', 'saved', { editorWorkspaceMode: true });
+    await profile.resetCliSession('chat', 'agy-thread');
+    expect(fetch.mock.calls.map(call => call[0])).toEqual([
+      'http://localhost:9100/antigravity/status', 'http://localhost:9100/antigravity/v1/models',
+      'http://localhost:9100/antigravity/v1/chat/completions', 'http://localhost:9100/codex-ide/ide-files',
+      'http://localhost:9100/antigravity/session/reset'
+    ]);
+    expect(JSON.parse(fetch.mock.calls[2][1].body)).toMatchObject({ model: 'gemini-test', reasoning_effort: 'max' });
+    expect(fetch.mock.calls.every(call => !call[1].headers.Authorization)).toBe(true);
+    expect(profile.getCliMaxTokens()).toBe(900);
+    const restored = createBrowser(Object.fromEntries(browser.values)); restored.load('backendProfile.js');
+    expect(restored.window.codexIdeProfile.getCliConfig()).toEqual({ url: 'http://localhost:9100/', model: 'gemini-test', reasoningEffort: 'max' });
+    profile.set('codex');
+    expect(profile.getCliConfig()).toEqual({ url: 'http://localhost:9000', model: 'codex-test', reasoningEffort: 'ultra' });
   });
 
   test('delegates local calls without making a network request', async () => {
@@ -139,7 +165,7 @@ describe('browser backend profiles', () => {
   });
 
   test.each([
-    ['codex', 1], ['codex', 7], ['codex', 4096],
+    ['codex', 1], ['antigravity', 1], ['codex', 7], ['codex', 4096],
     ['api', 1], ['api', 7], ['api', 4096]
   ])('decodes multiline SSE data in the %s backend with %s-byte reads', async (backend, chunkSize) => {
     profile.set(backend);
@@ -168,7 +194,7 @@ describe('browser backend profiles', () => {
     await expect(profile.codexChatCompletion([{ role: 'user', content: 'Hallo' }], 100)).rejects.toThrow('stream interrupted');
   });
 
-  test.each(['codex', 'api'])('finishes a %s stream at DONE while the HTTP body remains open', async backend => {
+  test.each(['codex', 'antigravity', 'api'])('finishes a %s stream at DONE while the HTTP body remains open', async backend => {
     profile.set(backend);
     profile.setApiConfig('https://api.example.test');
     let controller;

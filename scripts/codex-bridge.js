@@ -17,6 +17,7 @@ const {
 } = require('./codex-app-server-client');
 const { MODEL_HOME_TOOL_VERSION, modelHomeConfigArgs } = require('./codex-workspace-policy');
 const { getModelHomeDir } = require('./codex-model-home');
+const antigravity = require('./backends/antigravity');
 
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 8787;
@@ -2832,6 +2833,35 @@ function createServer(options = {}) {
   const allowedOrigins = options.allowedOrigins ||
     parseAllowedOrigins(process.env.CODEX_BRIDGE_ALLOWED_ORIGINS);
   let activeUserConsole = null;
+  const antigravityClient = options.antigravityClient || new antigravity.AntigravityClient(options);
+  const antigravityRunner = antigravity.createRunner(antigravityClient, {
+    workspaceToolVersion: MODEL_HOME_TOOL_VERSION,
+    workspace: async (request, args) => {
+      if (!request || !['list', 'read', 'terminal'].includes(request.operation)) {
+        throw new Error('Workspace-Aenderungen laufen ausschliesslich ueber den sichtbaren Live-Editor.');
+      }
+      if (request.operation === 'terminal') {
+        return (options.terminalRunner || runModelWorkspaceTerminal)(request.command, {
+          workdir: args.workdir, signal: args.signal,
+          onTerminalStart: item => { if (args.onTerminalStart) args.onTerminalStart(formatTerminalEventItem(item, args.workdir)); },
+          onTerminalOutput: args.onTerminalOutput,
+          onTerminalComplete: item => { if (args.onTerminalComplete) args.onTerminalComplete(formatTerminalEventItem(item, args.workdir)); }
+        });
+      }
+      const scope = { path: String(request.path || '') };
+      try {
+        return handleWorkspaceToolCall(args.workdir, { tool: CODEX_IDE_WORKSPACE_TOOL_NAME, arguments: request }, {
+          onListStart: args.onWorkspaceListStart, onList: args.onWorkspaceList,
+          onReadStart: args.onWorkspaceReadStart, onRead: args.onWorkspaceRead
+        });
+      } catch (error) {
+        const callback = request.operation === 'list' ? args.onWorkspaceListError : args.onWorkspaceReadError;
+        if (callback) callback({ ...scope, error: error.message });
+        throw error;
+      }
+    }
+  });
+  const antigravityOptions = { ...options, runCodex: antigravityRunner };
 
   const server = http.createServer(async (req, res) => {
     try {
@@ -2858,6 +2888,34 @@ function createServer(options = {}) {
       }
 
       const url = new URL(req.url, 'http://localhost');
+      const usesAntigravity = url.pathname.startsWith('/antigravity/');
+      const completionOptions = usesAntigravity ? antigravityOptions : options;
+      if (usesAntigravity) {
+        if (req.method === 'GET' && url.pathname === '/antigravity/status') {
+          const payload = await (options.antigravityStatus || antigravity.getStatus)(options);
+          sendJson(req, res, 200, { ...payload, policies: { ideWorkspace: getIdeWorkspacePolicy() } }, allowedOrigins);
+          return;
+        }
+        if (req.method === 'GET' && url.pathname === '/antigravity/sessions') {
+          sendJson(req, res, 200, { ok: true, ...antigravityClient.getStatus() }, allowedOrigins);
+          return;
+        }
+        if (req.method === 'POST' && url.pathname === '/antigravity/session/reset') {
+          const raw = await readBody(req);
+          const body = raw ? JSON.parse(raw) : {};
+          const reset = antigravityClient.resetSession(String(body.sessionId || body.session_id || 'default'));
+          sendJson(req, res, 200, { ok: true, reset }, allowedOrigins);
+          return;
+        }
+        if (req.method === 'GET' && url.pathname === '/antigravity/v1/models') {
+          const models = await (options.antigravityModels || antigravity.getModels)(options);
+          sendJson(req, res, 200, { object: 'list', data: [{ id: antigravity.ENGINE, object: 'model',
+            owned_by: antigravity.ENGINE, display_name: 'Antigravity-Standard', is_default: true,
+            supported_reasoning_efforts: antigravity.EFFORTS }].concat(models) }, allowedOrigins);
+          return;
+        }
+        if (url.pathname === '/antigravity/v1/chat/completions') url.pathname = '/v1/chat/completions';
+      }
       if (req.method === 'GET' && url.pathname === '/health') {
         sendJson(req, res, 200, {
           ok: true,
@@ -2884,6 +2942,9 @@ function createServer(options = {}) {
             codexUsage: '/codex/usage',
             codexSessions: '/codex/sessions',
             codexSessionReset: '/codex/session/reset',
+            antigravityStatus: '/antigravity/status',
+            antigravityModels: '/antigravity/v1/models',
+            antigravityChatCompletions: '/antigravity/v1/chat/completions',
             modelHomeContext: '/codex-ide/context',
             memory: '/codex-ide/memory',
             files: '/codex-ide/files',
@@ -3299,12 +3360,12 @@ function createServer(options = {}) {
       const raw = await readBody(req, Number.POSITIVE_INFINITY);
       const body = raw ? JSON.parse(raw) : {};
       if (body && body.stream) {
-        await streamChatCompletionFromRequest(req, res, body, options, allowedOrigins);
+        await streamChatCompletionFromRequest(req, res, body, completionOptions, allowedOrigins);
         return;
       }
       const requestAbort = createResponseAbortController(req, res);
       try {
-        const completion = await runCodexCompletion(body, options, { signal: requestAbort.signal });
+        const completion = await runCodexCompletion(body, completionOptions, { signal: requestAbort.signal });
         if (requestAbort.signal.aborted) return;
         const payload = createChatCompletionResponse(completion.content, body.model, completion.metadata);
         requestAbort.complete();
@@ -3326,6 +3387,7 @@ function createServer(options = {}) {
   // disconnect, including day-long agent turns.
   server.requestTimeout = 0;
   server.timeout = 0;
+  server.once('close', () => antigravityClient.close());
   return server;
 }
 

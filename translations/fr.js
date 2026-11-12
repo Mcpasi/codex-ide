@@ -2,6 +2,13 @@
   window.CodexIdeLocales = window.CodexIdeLocales || {};
   var base = window.CodexIdeLocales.de ? window.CodexIdeLocales.de.ui : {};
   window.CodexIdeLocales.fr = { ui: Object.assign({}, base, {
+    skillProfileAntigravity: "Antigravity CLI",
+    antigravityDefaultModel: "Antigravity par défaut",
+    antigravityModelLabel: "Modèle Antigravity",
+    antigravityReady: "La passerelle et Antigravity sont prêts.",
+    antigravityLoginRequired: "Passerelle accessible ; connexion Antigravity requise.",
+    antigravitySettingsHint: "Utilise votre connexion Antigravity existante. Les modifications apparaissent dans l’éditeur, puis sont enregistrées.",
+
     agentPromptLabel: 'Message à l’agent', agentPromptHint: 'Entrée pour envoyer · Maj+Entrée pour une nouvelle ligne',
     agentThoughtTitle: 'Réflexion', agentToolTitle: 'Outil',
     agentActivityRunning: 'En cours …', agentActivityComplete: 'Terminée', agentActivityStopped: 'Arrêtée', agentActivityError: 'Échec', agentActivityBlocked: 'Bloquée', agentActivityWaiting: 'En attente',

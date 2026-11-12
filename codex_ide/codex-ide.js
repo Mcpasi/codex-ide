@@ -135,6 +135,7 @@
       lastReply: '',
       lastTurn: null,
       codexThreadId: '',
+      antigravityThreadId: '',
       workspaceToolVersion: 0,
       createdAt: now,
       updatedAt: now
@@ -206,6 +207,7 @@
         : (history.length ? history[history.length - 1].reply : ''),
       lastTurn: lastTurn || null,
       codexThreadId: typeof value.codexThreadId === 'string' ? value.codexThreadId.trim().slice(0, 200) : '',
+      antigravityThreadId: typeof value.antigravityThreadId === 'string' ? value.antigravityThreadId.trim().slice(0, 200) : '',
       workspaceToolVersion: Number(value.workspaceToolVersion) || 0,
       createdAt: typeof value.createdAt === 'string' ? value.createdAt : new Date().toISOString(),
       updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : new Date().toISOString()
@@ -235,6 +237,7 @@
           lastReply: session.lastReply,
           lastTurn: normalizeSessionTurn(session.lastTurn),
           codexThreadId: session.codexThreadId,
+          antigravityThreadId: session.antigravityThreadId,
           workspaceToolVersion: session.workspaceToolVersion,
           createdAt: session.createdAt,
           updatedAt: session.updatedAt
@@ -636,7 +639,9 @@
       });
     }
     syncLanguageControls(window.__codexIdeCurrentLanguage || 'de');
-    byId('ideModel').options[0].textContent = t('codexDefaultModel', 'Codex-Standard');
+    var antigravityActive = window.codexIdeProfile && window.codexIdeProfile.get && window.codexIdeProfile.get() === 'antigravity';
+    byId('ideModel').options[0].textContent = antigravityActive ? t('antigravityDefaultModel', 'Antigravity-Standard') : t('codexDefaultModel', 'Codex-Standard');
+    if (antigravityActive) setText('ideModelLabel', 'antigravityModelLabel', 'Antigravity-Modell');
     var reasoningKeys = { '': 'codexReasoningOff', low: 'codexReasoningLow', medium: 'codexReasoningMedium', high: 'codexReasoningHigh', xhigh: 'codexReasoningXHigh', max: 'codexReasoningMax', ultra: 'codexReasoningUltra' };
     Array.prototype.forEach.call(byId('ideReasoning').options, function (option) { option.textContent = t(reasoningKeys[option.value], option.textContent); });
     if (!state.path && !state.dirty) setEditorStatus(t('ideReady', 'Bereit'));
@@ -1782,7 +1787,21 @@
     }
   }
 
+  var modelLoadSequence = 0;
+  function cliConfig() {
+    return window.codexIdeProfile.getCliConfig ? window.codexIdeProfile.getCliConfig() : window.codexIdeProfile.getCodexConfig();
+  }
+  function setCliConfig(url, model) {
+    return (window.codexIdeProfile.setCliConfig || window.codexIdeProfile.setCodexConfig)(url, model);
+  }
+  function setCliEffort(value) {
+    return (window.codexIdeProfile.setCliReasoningEffort || window.codexIdeProfile.setCodexReasoningEffort)(value);
+  }
+  function usesCli() {
+    return /^(codex|antigravity)$/.test(window.codexIdeProfile.get());
+  }
   async function loadModels() {
+    var requestId = ++modelLoadSequence;
     var profile = window.codexIdeProfile.get();
     if (profile === 'local') {
       var localReady = window.CodexIdeLocalModel && window.CodexIdeLocalModel.getStatus() === 'ready' && window.CodexIdeLocalModel.isEnabled();
@@ -1800,7 +1819,8 @@
     }
     setGatewayStatus(t('codexModelsLoading', 'Modelle werden geladen…'));
     try {
-      var models = await window.codexIdeProfile.listCodexModels();
+      var models = await (window.codexIdeProfile.listCliModels || window.codexIdeProfile.listCodexModels)();
+      if (requestId !== modelLoadSequence) return;
       state.codexModels = Array.isArray(models) ? models.slice() : [];
       var select = byId('ideModel');
       while (select.options.length > 1) select.remove(1);
@@ -1810,18 +1830,22 @@
         option.textContent = model.display_name || model.id;
         select.appendChild(option);
       });
-      var config = window.codexIdeProfile.getCodexConfig();
+      var config = cliConfig();
+      select.options[0].textContent = profile === 'antigravity' ? t('antigravityDefaultModel', 'Antigravity-Standard') : t('codexDefaultModel', 'Codex-Standard');
+      byId('ideModelLabel').textContent = profile === 'antigravity' ? t('antigravityModelLabel', 'Antigravity-Modell') : t('codexModelSelectLabel', 'Codex-Modell');
       select.value = config.model || '';
       var normalizedEffort = renderCodexReasoningOptions(state.codexModels, select.value, config.reasoningEffort);
       if (normalizedEffort !== (config.reasoningEffort || '')) {
-        window.codexIdeProfile.setCodexReasoningEffort(normalizedEffort);
+        setCliEffort(normalizedEffort);
       }
-      var status = await window.codexIdeProfile.codexBridgeStatus();
+      var status = await (window.codexIdeProfile.cliBridgeStatus || window.codexIdeProfile.codexBridgeStatus)();
+      if (requestId !== modelLoadSequence) return;
       var loggedIn = !!(status && (status.loggedIn === true || (status.login && status.login.loggedIn === true)));
       setGatewayStatus(loggedIn
-        ? t('ideGatewayReady', 'Gateway und Codex sind bereit.')
-        : t('ideGatewayLoginRequired', 'Gateway erreichbar; Codex-Anmeldung fehlt.'), loggedIn ? 'ok' : 'error');
+        ? (profile === 'antigravity' ? t('antigravityReady', 'Gateway und Antigravity sind bereit.') : t('ideGatewayReady', 'Gateway und Codex sind bereit.'))
+        : (profile === 'antigravity' ? t('antigravityLoginRequired', 'Gateway erreichbar; Antigravity-Anmeldung fehlt.') : t('ideGatewayLoginRequired', 'Gateway erreichbar; Codex-Anmeldung fehlt.')), loggedIn ? 'ok' : 'error');
     } catch (error) {
+      if (requestId !== modelLoadSequence) return;
       setGatewayStatus(t('codexModelsUnavailable', 'Modellliste nicht verfügbar') + ': ' + shortError(error), 'error');
     }
   }
@@ -1857,7 +1881,8 @@
     [''].concat(levels).forEach(function (level) {
       var option = document.createElement('option');
       option.value = level;
-      option.textContent = t(labels[level][0], labels[level][1]);
+      option.textContent = level === '' && window.codexIdeProfile.get() === 'antigravity'
+        ? t('antigravityDefaultModel', 'Antigravity-Standard') : t(labels[level][0], labels[level][1]);
       select.appendChild(option);
     });
     var normalized = levels.indexOf(requestedEffort) !== -1 ? requestedEffort : '';
@@ -2417,7 +2442,7 @@
 
   function buildIdePrompt(instruction) {
     var path = byId('idePath').value.trim();
-    var codexWorkspace = window.codexIdeProfile.get() === 'codex';
+    var codexWorkspace = usesCli();
     var relevantPaths = summarizeWorkspacePaths(selectRelevantWorkspacePaths(instruction, path, codexWorkspace), 5000);
     var openBuffers = summarizeWorkspacePaths(Object.keys(state.buffers).map(function (bufferPath) {
       return bufferPath + (state.buffers[bufferPath].dirty ? ' (ungespeichert)' : '');
@@ -2427,7 +2452,7 @@
       'Offene Editorpuffer: ' + (openBuffers.length ? openBuffers.join(', ') : '(keine)') + '\n' +
       'Workspace-Lesezugriff: ' + (state.permissions.read ? 'erteilt' : 'nicht erteilt') + '\n' +
       'Aktive Datei: ' + (path || '(keine)') + '\n' +
-      'Workspace-Profil: ' + (codexWorkspace ? 'codex' : 'strukturiert');
+      'Workspace-Profil: ' + (codexWorkspace ? window.codexIdeProfile.get() : 'strukturiert');
     return workspaceContext + '\n\nAktuelle Nutzeraufgabe:\n' + instruction;
   }
 
@@ -3236,7 +3261,7 @@
       var prompt = buildIdePrompt(instruction);
       var reply = await window.codexIdeProfile.apiGenerateReply(prompt, {
         sessionId: state.sessionId,
-        codexThreadId: (currentAgentSession() && currentAgentSession().codexThreadId) || '',
+        codexThreadId: (currentAgentSession() && currentAgentSession()[window.codexIdeProfile.get() === 'antigravity' ? 'antigravityThreadId' : 'codexThreadId']) || '',
         workspaceToolVersion: (currentAgentSession() && currentAgentSession().workspaceToolVersion) || 0,
         conversationHistory: state.history.slice(),
         reasoningEffort: byId('ideReasoning').value,
@@ -3249,8 +3274,9 @@
           var threadId = String(detail.threadId || '').trim().slice(0, 200);
           var session = currentAgentSession();
           var toolVersion = Number(detail.workspaceToolVersion) || 0;
-          if (!threadId || !session || (session.codexThreadId === threadId && session.workspaceToolVersion === toolVersion)) return;
-          session.codexThreadId = threadId;
+          var threadKey = window.codexIdeProfile.get() === 'antigravity' ? 'antigravityThreadId' : 'codexThreadId';
+          if (!threadId || !session || (session[threadKey] === threadId && session.workspaceToolVersion === toolVersion)) return;
+          session[threadKey] = threadId;
           session.workspaceToolVersion = toolVersion;
           session.updatedAt = new Date().toISOString();
           persistAgentSessions();
@@ -3438,7 +3464,7 @@
       if (state.turnId === turnId) {
         setBusy(false);
         renderActivities();
-        if (window.codexIdeProfile.get() === 'codex') {
+        if (usesCli()) {
           await refreshFiles(state.path, { refreshBuffers: true });
         }
       }
@@ -3495,8 +3521,8 @@
     if (state.busy || state.fileBusy || state.consoleBusy) return;
     var session = currentAgentSession();
     if (!session || !window.confirm(t('conversationDeleteConfirm', 'Diese Sitzung wirklich löschen?'))) return;
-    if (window.codexIdeProfile.get() === 'codex') {
-      try { await window.codexIdeProfile.resetCodexSession(session.id, session.codexThreadId); } catch (_) {}
+    if (usesCli()) {
+      try { await (window.codexIdeProfile.resetCliSession || window.codexIdeProfile.resetCodexSession)(session.id, session[window.codexIdeProfile.get() === 'antigravity' ? 'antigravityThreadId' : 'codexThreadId']); } catch (_) {}
     }
     state.sessions = state.sessions.filter(function (entry) { return entry.id !== session.id; });
     if (!state.sessions.length) state.sessions.push(createAgentSession());
@@ -3541,12 +3567,12 @@
     });
     byId('idePath').addEventListener('input', function () { refreshEditorDirty(); scheduleEditorHighlight(); });
     byId('ideModel').addEventListener('change', function () {
-      var config = window.codexIdeProfile.getCodexConfig();
-      window.codexIdeProfile.setCodexConfig(config.url, this.value);
+      var config = cliConfig();
+      setCliConfig(config.url, this.value);
       var effort = renderCodexReasoningOptions(state.codexModels, this.value, config.reasoningEffort);
-      if (effort !== (config.reasoningEffort || '')) window.codexIdeProfile.setCodexReasoningEffort(effort);
+      if (effort !== (config.reasoningEffort || '')) setCliEffort(effort);
     });
-    byId('ideReasoning').addEventListener('change', function () { window.codexIdeProfile.setCodexReasoningEffort(this.value); });
+    byId('ideReasoning').addEventListener('change', function () { setCliEffort(this.value); });
     window.addEventListener('beforeunload', function (event) { if (!hasDirtyBuffers()) return; event.preventDefault(); event.returnValue = ''; });
     window.addEventListener('pagehide', function () { persistAgentSessions(); });
     window.addEventListener('resize', syncEditorScroll);
