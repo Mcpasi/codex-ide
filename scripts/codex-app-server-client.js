@@ -11,7 +11,7 @@ const DEFAULT_TURN_TIMEOUT_MS = 0;
 const DEFAULT_CLIENT_INFO = {
   name: 'codex_ide_gateway',
   title: 'Codex IDE Gateway',
-  version: '1.0.0'
+  version: '1.3.3'
 };
 const CODEX_IDE_WORKSPACE_TOOL_NAME = 'codex_ide_workspace';
 const CODEX_IDE_TERMINAL_TOOL_NAME = 'codex_ide_terminal';
