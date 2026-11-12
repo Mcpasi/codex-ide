@@ -16,6 +16,7 @@
   var editorDiff = typeof module === 'object' && module.exports
     ? require('./editor-diff') : window.CodexIdeEditorDiff;
   var renderedActivities = [];
+  var editorHighlightSnapshot = null;
   var CODEX_REASONING_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'];
 
   var state = {
@@ -1159,13 +1160,20 @@
     var lineHeight = parseFloat(computed && computed.lineHeight) || fontSize * 1.55;
     var prefix = content.slice(0, offset);
     var lineStart = prefix.lastIndexOf('\n') + 1;
+    var lineText = prefix.slice(lineStart);
+    var lineIndex = 0;
+    for (var newline = content.indexOf('\n'); newline !== -1 && newline < offset; newline = content.indexOf('\n', newline + 1)) {
+      lineIndex += 1;
+    }
     var columns = 0;
     var tabSize = parseFloat(computed && computed.tabSize) || 2;
-    Array.from(prefix.slice(lineStart)).forEach(function (character) {
-      columns += character === '\t' ? tabSize - columns % tabSize : 1;
-    });
+    for (var index = 0; index < lineText.length;) {
+      var point = lineText.codePointAt(index);
+      columns += point === 9 ? tabSize - columns % tabSize : 1;
+      index += point > 0xffff ? 2 : 1;
+    }
     var geometry = {
-      top: (parseFloat(computed && computed.paddingTop) || 0) + (prefix.split('\n').length - 1) * lineHeight,
+      top: (parseFloat(computed && computed.paddingTop) || 0) + lineIndex * lineHeight,
       left: (parseFloat(computed && computed.paddingLeft) || 0) + columns *
         (fontSize * 0.6 + (parseFloat(computed && computed.letterSpacing) || 0)),
       height: lineHeight
@@ -1176,7 +1184,9 @@
     var mirror = doc.createElement('div');
     var caret = doc.createElement('span');
     if (typeof caret.getBoundingClientRect !== 'function') return geometry;
-    // Measure the same font, padding, tabs and Unicode shaping as the textarea.
+    // Unwrapped textarea rows have a fixed line height. Shape only the active
+    // row: mirroring the entire prefix lays out thousands of unchanged rows
+    // twice per keystroke and allocates their text/line boxes on every frame.
     // A clipped zero-size host cannot alter the page's scrollable dimensions.
     host.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;overflow:hidden;visibility:hidden;pointer-events:none';
     mirror.style.cssText = 'position:relative;width:max-content;white-space:pre;border:0;margin:0';
@@ -1186,7 +1196,8 @@
       'paddingBottom', 'paddingLeft'].forEach(function (property) {
       mirror.style[property] = computed[property];
     });
-    mirror.textContent = prefix;
+    if (lineIndex > 0) mirror.style.textIndent = '0px';
+    mirror.textContent = lineText;
     caret.textContent = '\u200b';
     mirror.appendChild(caret);
     host.appendChild(mirror);
@@ -1195,7 +1206,7 @@
       var origin = mirror.getBoundingClientRect();
       var position = caret.getBoundingClientRect();
       if (position.height > 0) {
-        geometry.top = position.top - origin.top;
+        geometry.top = lineIndex * lineHeight + position.top - origin.top;
         geometry.left = position.left - origin.left;
         geometry.height = Math.max(lineHeight, position.height);
       }
@@ -1238,6 +1249,28 @@
     var end = editor ? String(editor.value == null ? '' : editor.value).length : 0;
     followLiveEditorRange(editor, highlight, end, end);
   }
+  function updateEditorHighlightHtml(code, html) {
+    var doc = code.ownerDocument;
+    var template = doc && doc.createElement('template');
+    if (!template || !template.content) { code.innerHTML = html; return; }
+    template.innerHTML = html;
+    var previous = Array.from(code.childNodes);
+    var next = Array.from(template.content.childNodes);
+    var start = 0;
+    var previousEnd = previous.length - 1;
+    var nextEnd = next.length - 1;
+    while (start <= previousEnd && start <= nextEnd && previous[start].isEqualNode(next[start])) start += 1;
+    while (previousEnd >= start && nextEnd >= start && previous[previousEnd].isEqualNode(next[nextEnd])) {
+      previousEnd -= 1;
+      nextEnd -= 1;
+    }
+    // Preserve unchanged syntax nodes so a local keystroke does not invalidate
+    // layout for every line. Tokenization still sees the entire source, keeping
+    // multiline strings/comments and embedded languages correct.
+    var anchor = previous[previousEnd + 1] || null;
+    for (var remove = start; remove <= previousEnd; remove += 1) code.removeChild(previous[remove]);
+    for (var insert = start; insert <= nextEnd; insert += 1) code.insertBefore(next[insert], anchor);
+  }
   function renderEditorHighlight() {
     state.highlightFrame = null;
     var editor = byId('ideEditor');
@@ -1246,13 +1279,23 @@
     var path = byId('idePath').value.trim() || state.path || 'untitled.txt';
     if (!editor || !code || !surface) return;
     var highlighter = window.CodexIdeSyntaxHighlighter;
-    var result = highlighter && typeof highlighter.highlight === 'function'
-      ? highlighter.highlight(editor.value, path)
-      : { language: 'text', label: 'Text', html: '' };
-    if (highlighter && typeof highlighter.highlight === 'function') {
-      code.innerHTML = result.html + (editor.value.endsWith('\n') ? ' ' : '');
-    } else {
-      code.textContent = editor.value;
+    var highlight = highlighter && highlighter.highlight;
+    var content = editor.value;
+    var result = editorHighlightSnapshot;
+    if (!result || result.content !== content || result.path !== path || result.code !== code ||
+        result.highlighter !== highlighter || result.highlight !== highlight) {
+      result = typeof highlight === 'function'
+        ? highlighter.highlight(content, path)
+        : { language: 'text', label: 'Text', html: '' };
+      if (typeof highlight === 'function') {
+        updateEditorHighlightHtml(code, result.html + (content.endsWith('\n') ? ' ' : ''));
+      } else {
+        code.textContent = content;
+      }
+      // Keep only the current source and language metadata, never a history of
+      // source/HTML snapshots. Scroll following and paint waiters still run.
+      editorHighlightSnapshot = { content: content, path: path, code: code,
+        highlighter: highlighter, highlight: highlight, language: result.language, label: result.label };
     }
     surface.setAttribute('data-language', result.language);
     byId('ideSyntaxMode').textContent = format('ideSyntaxMode', 'Syntax: {language}', { language: result.label });

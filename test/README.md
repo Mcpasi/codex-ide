@@ -33,6 +33,8 @@ standardmäßigen Jest-Instrumentierung nicht als Coverage erfasst.
 | Datei | Geprüftes Verhalten |
 | --- | --- |
 | `performance.test.js` | Streaming-Skalierung, stark fragmentiertes SSE, Planer-/Editor-Übergabe, persistenter App Server, erste sichtbare Änderung und Speichern ohne Workspace-Rundreise; Messwerte und Budgets in [PERFORMANCE.md](PERFORMANCE.md) |
+| `performance-editor.test.js` | 120 Änderungen einer großen Datei, Streaming-Schübe und 30 Abbrüche ohne wachsende Timer/Puffer; 5.000 unveränderte Aktualisierungen ohne erneute Tokenisierung |
+| `performance-editor-browser.test.js` | Echter Chromium-Dauerlauf mit 100 Speicherungen und 20 Abbrüchen, Heap nach GC, DOM-/Pufferbestände und Callback-Zeiten; vollständige Unicode-Schreib-/Löschanimation und Syntax-Äquivalenz für alle sieben unterstützten Sprachen |
 | `workspace-access.test.js` | Modell-Home-Reads, Live-Editor-Persistenz, interne Symlinks, Binaer-Reads, isolierte Pruefkonsole und grosse/tiefe Workspaces |
 | `workspace-buffers.test.js` | Aktualisierung sauberer Puffer nach nativen Aenderungen und Erhalt ungespeicherter Eingaben |
 | `workspace.test.js` | Lesen, Schreiben, Editieren, Verzeichnislisten, Pfadschutz, geschützte Dateien, Symlinks und PDF-Bytes |
@@ -77,15 +79,16 @@ uebersprungen. Der Dateisymlink-Migrationstest wird unter Windows wegen der
 zusaetzlichen Symlink-Rechte uebersprungen; Verzeichnislinks verwenden dort
 Junctions.
 
-Die Scroll-Regression startet einen isolierten Headless-Chromium, wenn
+Die Scroll- und Editor-Performance-Regressionen starten einen isolierten Headless-Chromium, wenn
 `chromium`, `chromium-browser` oder `google-chrome` im PATH vorhanden ist.
-Sie verwendet das echte HTML, CSS und Syntaxrendering; `Range`-Messungen prüfen
+Sie verwenden das echte HTML, CSS und Syntaxrendering; `Range`-Messungen prüfen
 die Sichtbarkeit des bearbeiteten Textes in jedem Animationsschritt. Ohne
-installierten Browser wird nur diese Testdatei übersprungen. Für einen
+installierten Browser werden die jeweiligen Browsertests übersprungen. Für einen
 verpflichtenden Lauf, etwa in CI, einen Browserpfad explizit setzen:
 
 ```bash
 CODEX_IDE_TEST_BROWSER=/usr/bin/chromium npm test -- test/editor-scroll-browser.test.js
+CODEX_IDE_TEST_BROWSER=/usr/bin/chromium npm run test:performance
 ```
 
 Ein ungültiger expliziter Browserpfad lässt den Test fehlschlagen. Die Tests

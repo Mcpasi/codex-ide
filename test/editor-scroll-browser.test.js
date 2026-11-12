@@ -119,13 +119,20 @@ async function checkVisibleWorkSites() {
   activateBuffer('wide.js', wide, wide, false);
   await apply({ operation: 'edit', path: 'wide.js', oldText: wide, newText: wide.replace('old', 'new').replace('before', 'after') });
 
+  // The caret mirror measures only the current unwrapped row. Earlier emoji
+  // rows, tabs and combining/CJK characters must not change its real position.
+  const unicode = 'const icon = "👋";\n'.repeat(140) + '\tconst label = "é 漢字 👩‍💻 old";\n';
+  activateBuffer('unicode.js', unicode, unicode, false);
+  await apply({ operation: 'edit', path: 'unicode.js', oldText: 'old', newText: 'new' });
+
   return {
     errors, frameCount: frames.length,
     followedDistantSite: frames.some(frame => frame.path === 'app.js' && frame.line === 221),
     followedInsertion: frames.some(frame => frame.path === 'new.js' && frame.line > 100 && frame.operation === 'write'),
     followedDeletion: frames.some(frame => frame.path === 'new.js' && frame.line > 100 && frame.operation === 'edit-delete'),
     followedHorizontalSite: frames.some(frame => frame.path === 'wide.js' && frame.scroll.left > 0),
-    returnedToLeftEdge: textarea.scrollLeft === 0,
+    returnedToLeftEdge: frames.some(frame => frame.path === 'wide.js' && frame.line > 100 && frame.scroll.left === 0),
+    followedUnicode: frames.some(frame => frame.path === 'unicode.js' && frame.line === 141),
     fonts: { editor: getComputedStyle(textarea).font, syntax: getComputedStyle(code).font }
   };
 }
@@ -166,7 +173,7 @@ browserTest.each([
     expect(report.errors).toEqual([]);
     expect(report.fonts.syntax).toBe(report.fonts.editor);
     expect(report.frameCount).toBeGreaterThan(100);
-    for (const check of ['followedDistantSite', 'followedInsertion', 'followedDeletion', 'followedHorizontalSite', 'returnedToLeftEdge']) expect({ check, passed: report[check] }).toEqual({ check, passed: true });
+    for (const check of ['followedDistantSite', 'followedInsertion', 'followedDeletion', 'followedHorizontalSite', 'returnedToLeftEdge', 'followedUnicode']) expect({ check, passed: report[check] }).toEqual({ check, passed: true });
   } finally {
     fs.rmSync(temporary, { recursive: true, force: true });
   }
