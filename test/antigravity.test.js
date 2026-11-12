@@ -100,6 +100,48 @@ describe('Antigravity CLI transport', () => {
     expect(harness.prompts[2].message.content).toBe('full task');
   });
 
+  test('terminates the CLI after a stdin pipe error before recovering in a fresh process', async () => {
+    const error = Object.assign(new Error('broken input pipe'), { code: 'EPIPE' });
+    setup((_prompt, transport) => {
+      if (transport.child !== harness.children[0]) return false;
+      transport.child.stdin.emit('error', error);
+      return true;
+    });
+
+    await expect(client.run(args)).rejects.toBe(error);
+    expect(harness.children[0].kill).toHaveBeenCalledWith('SIGTERM');
+    await expect(client.run({ ...args, threadId: 'stale-thread' })).resolves.toMatchObject({ content: 'Grüße 👋' });
+    expect(harness.spawnImpl).toHaveBeenCalledTimes(2);
+    expect(harness.spawnImpl.mock.calls[1][1]).not.toContain('--conversation');
+    expect(harness.prompts[1].message.content).toBe('full task');
+  });
+
+  test('replays workspace results with the full task when the CLI crashes during a workspace read', async () => {
+    const request = '<codex_ide_workspace_request>{"operation":"read","path":"src/a.js","purpose":"inspect"}</codex_ide_workspace_request>';
+    const outcome = { success: true, file: { path: 'src/a.js', content: 'const marker = "recovery 👋";' } };
+    let calls = 0;
+    setup((_prompt, transport) => {
+      const text = ++calls === 1 ? request : 'Wiederhergestellt.';
+      transport.token(text); transport.result(text);
+      return true;
+    });
+    const workspace = jest.fn(async () => {
+      harness.children[0].emit('close', 1);
+      return outcome;
+    });
+    const run = createRunner(client, { workspace, workspaceToolVersion: 3 });
+    const tokens = [];
+
+    await expect(run({ ...args, onToken: text => tokens.push(text) })).resolves.toMatchObject({ content: 'Wiederhergestellt.' });
+    expect(workspace).toHaveBeenCalledTimes(1);
+    expect(harness.spawnImpl).toHaveBeenCalledTimes(2);
+    expect(harness.spawnImpl.mock.calls[1][1]).not.toContain('--conversation');
+    expect(harness.prompts[1].message.content).toContain(JSON.stringify(outcome));
+    expect(harness.prompts[1].message.content).toContain(request);
+    expect(harness.prompts[1].message.content).toContain('full task');
+    expect(tokens.join('')).toBe('Wiederhergestellt.');
+  });
+
   test.each(['ERROR', 'WAITING', 'RUNNING', 'INVALID'])('rejects a %s result even if the process stays open', async status => {
     setup((_prompt, transport) => { transport.result('', { status, error: 'provider failure' }); return true; });
     await expect(client.run(args)).rejects.toThrow('provider failure');
