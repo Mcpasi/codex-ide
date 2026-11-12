@@ -6,6 +6,8 @@
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D%2018.18.0-43853d?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 
+<img src="screenshots/output.gif">
+
 Codex IDE brings your coding agent, editor and project files together in one browser-based workspace. Watch the agent open files, write code and check its work while you follow the conversation in real time.
 
 [Watch the demo](https://youtu.be/o9aAy9NVCOA?is=0xDMwUE6E3fh8jmN) · [Download a release](https://github.com/Mcpasi/codex-ide/releases) · [Technical documentation](DOKUMENTATION_EN.md)
