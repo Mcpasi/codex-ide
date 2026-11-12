@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.4 - Release metadata and PWA refresh
+
+- Set the npm package, lockfile metadata and gateway client identity to `1.3.4`; update the version badge and release installation examples.
+- Advance the PWA shell cache to `codex-ide-v51`, align all versioned shell assets at `?v=51` and update the PWA documentation.
+
 ## 1.3.3 - Antigravity CLI backend
 
 - Add a modular Antigravity CLI adapter using the existing official sign-in and persistent JSON streaming. Keep provider configuration and conversation IDs independent, expose login/status commands, model selection and settings, and include the adapter in npm packages.
