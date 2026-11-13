@@ -2693,39 +2693,44 @@ function readBody(req, maxBytes = 1024 * 1024) {
     let data = '';
     let receivedBytes = 0;
     let settled = false;
-    const decoder = new StringDecoder('utf8');
-    const failTooLarge = () => {
+    const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
+    const fail = error => {
       if (settled) return;
       settled = true;
       data = '';
       if (typeof req.resume === 'function') req.resume();
-      reject(new Error('Request zu gross'));
+      reject(error);
     };
     req.on('data', chunk => {
       if (settled) return;
-      receivedBytes += Buffer.isBuffer(chunk) ? chunk.length : Buffer.byteLength(String(chunk));
+      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
+      receivedBytes += bytes.length;
       if (receivedBytes > maxBytes) {
-        failTooLarge();
+        fail(new Error('Request zu gross'));
         return;
       }
-      data += decoder.write(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+      try {
+        data += decoder.decode(bytes, { stream: true });
+      } catch (_) {
+        fail(new Error('Request enthaelt kein gueltiges UTF-8'));
+      }
     });
     req.on('end', () => {
       if (!settled) {
+        try {
+          data += decoder.decode();
+        } catch (_) {
+          fail(new Error('Request enthaelt kein gueltiges UTF-8'));
+          return;
+        }
         settled = true;
-        data += decoder.end();
         resolve(data);
       }
     });
-    req.on('error', error => {
-      if (!settled) {
-        settled = true;
-        reject(error);
-      }
-    });
+    req.on('error', fail);
 
     const declaredBytes = Number(req.headers && req.headers['content-length']);
-    if (Number.isFinite(declaredBytes) && declaredBytes > maxBytes) failTooLarge();
+    if (Number.isFinite(declaredBytes) && declaredBytes > maxBytes) fail(new Error('Request zu gross'));
   });
 }
 

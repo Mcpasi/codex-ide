@@ -233,6 +233,32 @@ describe('gateway HTTP integration', () => {
     });
   });
 
+  test('rejects an incomplete UTF-8 sequence at the end of a JSON request', async () => {
+    const file = 'request-utf8-incomplete.txt';
+    const raw = Buffer.concat([
+      Buffer.from(JSON.stringify({ path: file, content: 'Must not be saved' })),
+      Buffer.from([0xf0, 0x9f, 0x91])
+    ]);
+    const result = await request('/codex-ide/ide-files', {
+      method: 'POST', headers: workspaceHeaders, raw
+    });
+
+    expect(result.status).toBe(400);
+    expect(result.json.error.message).toMatch(/UTF-8/);
+    expect(fs.existsSync(path.join(fixture.home, file))).toBe(false);
+  });
+
+  test('preserves valid UTF-8 including a literal replacement character on editor saves', async () => {
+    const file = 'request-utf8-valid.txt';
+    const content = 'Grüße 👋 \uFFFD\n';
+    const result = await request('/codex-ide/ide-files', {
+      method: 'POST', headers: workspaceHeaders, body: { path: file, content }
+    });
+
+    expect(result.status).toBe(200);
+    expect(fs.readFileSync(path.join(fixture.home, file))).toEqual(Buffer.from(content));
+  });
+
   test('checks the skill ID and the permission for extended-file reads and writes', async () => {
     const route = '/codex-ide/extended-files?path=app.js';
     expect((await request(route)).status).toBe(400);

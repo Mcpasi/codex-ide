@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.6 - Gateway request UTF-8 validation
+
+- Reject malformed and incomplete UTF-8 JSON request bodies with HTTP 400 before parsing or saving, preventing corrupted text from overwriting editor files. Preserve valid Unicode, including literal replacement characters, and cover existing-file overwrites, incomplete request endings and valid saves with HTTP regression tests.
+
 ## 1.3.5 - Agent session and editor performance
 
 - Reproduce growing agent-turn UI work with a 512-activity regression and an opt-in Chromium benchmark using native frames, visible editor saves, cancelled drafts, console output and a complete session-storage roundtrip. Add a gentle one-minute run and a 15-minute soak, with exclusive browser ownership, memory/elapsed-time watchdogs, lower process priority and process-group cleanup.
