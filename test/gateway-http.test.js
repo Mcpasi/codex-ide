@@ -54,6 +54,7 @@ describe('gateway HTTP integration', () => {
     });
     server = createGatewayServer({
       modelHome: fixture.home, staticRoot, engine: 'app-server', appServerClient, runCodex,
+      userTerminalRuntime: { runnerPath: path.join(fixture.root, 'missing-console-runner') },
       allowedOrigins: ['https://trusted.test'], sseHeartbeatMs: 0
     });
     await new Promise((resolve, reject) => {
@@ -409,6 +410,30 @@ describe('gateway HTTP integration', () => {
   test('handles malformed JSON and an empty conversation as request errors', async () => {
     expect((await request('/v1/chat/completions', { method: 'POST', raw: '{invalid' })).status).toBe(400);
     expect((await request('/v1/chat/completions', { method: 'POST', body: { messages: [] } })).status).toBe(400);
+  });
+
+  test('reports a failed user-console process start without claiming a successful exit', async () => {
+    // Use a real ENOENT from spawn, without a compiler or an installed CLI.
+    const result = await request('/codex-ide/console', {
+      method: 'POST',
+      headers: { ...workspaceHeaders, 'X-Codex-IDE-Console': 'user' },
+      body: { command: 'echo should-not-run', itemId: 'spawn-failure' }
+    });
+
+    expect(result.status).toBe(200);
+    expect(result.headers['content-type']).toContain('text/event-stream');
+    const events = result.text.split('\n').filter(line => line.startsWith('data: ')).map(line => line.slice(6));
+    expect(events.pop()).toBe('[DONE]');
+    const chunks = events.map(event => JSON.parse(event));
+    expect(chunks.filter(chunk => chunk.error)).toEqual([]);
+    const terminal = chunks.map(chunk => chunk.codexIde?.terminal_event).filter(Boolean);
+    expect(terminal[0]).toMatchObject({ phase: 'start', source: 'user', item_id: 'spawn-failure' });
+    expect(terminal.filter(event => event.phase === 'output').map(event => event.delta).join('')).toContain('ENOENT');
+    expect(terminal.filter(event => event.phase === 'complete')).toEqual([
+      expect.objectContaining({
+        item_id: 'spawn-failure', source: 'user', status: 'failed', exit_code: null
+      })
+    ]);
   });
 
   test('requires the explicit user-console contract and rejects input for absent processes', async () => {
