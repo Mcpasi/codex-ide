@@ -67,6 +67,29 @@ describe('CLI arguments and command dispatch', () => {
     expect(openUrl).toHaveBeenCalledWith('http://localhost:8787/?codex-ide-clean=1', expect.any(Object));
   });
 
+  test.each([
+    ['127.0.0.1', 'http://localhost:9000/'],
+    ['::1', 'http://localhost:9000/'],
+    ['2001:db8::1', 'http://[2001:db8::1]:9000/']
+  ])('cleans an existing gateway on %s using valid HTTP URLs', async (host, baseUrl) => {
+    // Keep URL construction, CLI dispatch and the health probe real; only
+    // replace the HTTP transport and browser launcher to avoid external effects.
+    const requestImpl = jest.fn((_url, callback) => {
+      callback({ statusCode: 200, resume: jest.fn() });
+      return { on: jest.fn(), setTimeout: jest.fn() };
+    });
+    const openUrl = jest.fn().mockReturnValue(true);
+
+    await expect(cli.main(['clean', '--host', host, '--port', '9000'], {
+      logger, requestImpl, openUrl
+    })).resolves.toBe(0);
+
+    expect(requestImpl).toHaveBeenCalledTimes(1);
+    expect(requestImpl.mock.calls[0][0].href).toBe(baseUrl + 'health');
+    expect(openUrl).toHaveBeenCalledTimes(1);
+    expect(openUrl).toHaveBeenCalledWith(baseUrl + '?codex-ide-clean=1', expect.any(Object));
+  });
+
   test('validates a bundled skill and resolves the /skill_packages alias', async () => {
     const directory = path.resolve(__dirname, '../skill_packages/PDF_Skill');
     expect(cli.resolveSkillDirectoryArg('/skill_packages/PDF_Skill')).toBe(directory);
