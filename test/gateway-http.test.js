@@ -208,6 +208,31 @@ describe('gateway HTTP integration', () => {
     expect(fs.readFileSync(path.join(fixture.home, 'encoded.txt'))).toEqual(bytes);
   });
 
+  test('rejects malformed UTF-8 JSON before overwriting an editor file', async () => {
+    const file = 'request-utf8.txt';
+    const original = 'Originalinhalt: Grüße 👋\n';
+    const saved = await request('/codex-ide/ide-files', {
+      method: 'POST', headers: workspaceHeaders, body: { path: file, content: original }
+    });
+    expect(saved.status).toBe(200);
+    expect(fixture.read(file)).toBe(original);
+
+    // 0xc3 requires a continuation byte; 0x28 is ASCII "(". Replacing the
+    // malformed sequence with U+FFFD would leave parseable JSON and corrupt the file.
+    const raw = Buffer.concat([
+      Buffer.from('{"path":"' + file + '","content":"Gr'),
+      Buffer.from([0xc3, 0x28]),
+      Buffer.from('ße"}')
+    ]);
+    const result = await request('/codex-ide/ide-files', {
+      method: 'POST', headers: workspaceHeaders, raw
+    });
+
+    expect({ status: result.status, content: fixture.read(file) }).toEqual({
+      status: 400, content: original
+    });
+  });
+
   test('checks the skill ID and the permission for extended-file reads and writes', async () => {
     const route = '/codex-ide/extended-files?path=app.js';
     expect((await request(route)).status).toBe(400);
