@@ -2,7 +2,7 @@
 
 **Your agent at work. Every change, live.**
 
-[![Version](https://img.shields.io/badge/version-1.3.4-e95466?style=for-the-badge)](https://github.com/Mcpasi/codex-ide/releases)
+[![Version](https://img.shields.io/badge/version-1.3.5-e95466?style=for-the-badge)](https://github.com/Mcpasi/codex-ide/releases)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D%2018.18.0-43853d?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 
@@ -32,14 +32,14 @@ The separate user console is available on Linux and requires a C compiler such a
 
 ## Installation
 
-1. Download the `codex-ide-1.3.4.tgz` release asset from [GitHub Releases](https://github.com/Mcpasi/codex-ide/releases).
+1. Download the `codex-ide-1.3.5.tgz` release asset from [GitHub Releases](https://github.com/Mcpasi/codex-ide/releases).
 2. Open a terminal in the directory containing the downloaded file and install it:
 
    ```bash
-   npm install -g ./codex-ide-1.3.4.tgz
+   npm install -g ./codex-ide-1.3.5.tgz
    ```
 
-   For another release, use the filename of the `.tgz` asset you downloaded. There is no need to extract it first. If your system requires administrator permissions for global packages, use `sudo npm install -g ./codex-ide-1.3.4.tgz` on Linux or macOS.
+   For another release, use the filename of the `.tgz` asset you downloaded. There is no need to extract it first. If your system requires administrator permissions for global packages, use `sudo npm install -g ./codex-ide-1.3.5.tgz` on Linux or macOS.
 
 3. Start Codex IDE:
 

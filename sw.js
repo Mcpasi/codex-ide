@@ -1,6 +1,6 @@
 // Service Worker fuer die eigenstaendige IDE-App-Shell. Gateway-Routen werden
 // nie gecacht, damit Modell-, Datei- und Auth-Status immer aktuell bleiben.
-const CACHE_NAME = 'codex-ide-v52';
+const CACHE_NAME = 'codex-ide-v53';
 const UPDATE_RELOAD_URL = './__codex_ide_update_reload__';
 const URLS_TO_CACHE = [
   './',
@@ -12,19 +12,19 @@ const URLS_TO_CACHE = [
   'skills/extended-files/manifest.json',
   'skills/codexIdeTutorSkill.js',
   'skills/codex-ide-tutor/manifest.json',
-  'skillSystem.js?v=52',
-  'agentResponse.js?v=52',
-  'backendProfile.js?v=52',
-  'Safetyfilter.js?v=52',
-  'localModel.js?v=52',
-  'translations/de.js?v=52',
-  'translations/en.js?v=52',
-  'translations/fr.js?v=52',
-  'codex_ide/codex-ide.css?v=52',
-  'codex_ide/settings.js?v=52',
-  'codex_ide/syntax-highlighter.js?v=52',
-  'codex_ide/editor-diff.js?v=52',
-  'codex_ide/codex-ide.js?v=52',
+  'skillSystem.js?v=53',
+  'agentResponse.js?v=53',
+  'backendProfile.js?v=53',
+  'Safetyfilter.js?v=53',
+  'localModel.js?v=53',
+  'translations/de.js?v=53',
+  'translations/en.js?v=53',
+  'translations/fr.js?v=53',
+  'codex_ide/codex-ide.css?v=53',
+  'codex_ide/settings.js?v=53',
+  'codex_ide/syntax-highlighter.js?v=53',
+  'codex_ide/editor-diff.js?v=53',
+  'codex_ide/codex-ide.js?v=53',
   'codex_ide_icon_192.png',
   'codex_ide_icon_512.png',
   'codex-ide.svg'
