@@ -1,0 +1,34 @@
+{
+  "baselineRevision": "ffc251b48bcecca153ce66ab8b588f6221184db9",
+  "activities": 512,
+  "windowActivities": 128,
+  "before": {
+    "attributeMutations": [
+      16640,
+      49408,
+      82176,
+      114944
+    ],
+    "cpuMs": [
+      620.177155,
+      1317.480333,
+      2094.152948,
+      2985.526021
+    ]
+  },
+  "after": {
+    "attributeMutations": [
+      384,
+      384,
+      384,
+      384
+    ],
+    "cpuMs": [
+      158.175711,
+      155.072643,
+      95.082958,
+      119.962085
+    ]
+  },
+  "note": "Identical Node-VM workload. Mutation counts are deterministic; CPU timings depend on host load. All 512 activity results are retained."
+}

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Reproduce growing agent-turn UI work with a 512-activity regression and an opt-in Chromium benchmark using native frames, visible editor saves, cancelled drafts, console output and a complete session-storage roundtrip. Add a gentle one-minute run and a 15-minute soak, with exclusive browser ownership, memory/elapsed-time watchdogs, lower process priority and process-group cleanup.
+- Update only the changed activity card, skip unchanged DOM fields and follow streamed activity once per display frame. Isolate chat/console layout from the editor and defer offscreen card rendering while retaining the entire history and disclosure controls. Keep editor-only writes and paint-before-save behavior. Advance the PWA shell cache/assets to `codex-ide-v52`.
+- Reuse one isolated caret measurement DOM and its current-row geometry, invalidate it on text/font/tab changes and font loading, and avoid unchanged editor status/syntax writes. Extend native glyph-position checks to font changes during a session and apply the resource watchdog to the existing editor/scroll browser suites as well.
+
 ## 1.3.4 - Release metadata and PWA refresh
 
 - Set the npm package, lockfile metadata and gateway client identity to `1.3.4`; update the version badge and release installation examples.

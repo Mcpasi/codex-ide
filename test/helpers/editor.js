@@ -40,7 +40,7 @@ function createElement() {
   return element;
 }
 
-function createEditor() {
+function createEditor(options = {}) {
   const browser = createBrowser();
   const projectRoot = path.resolve(__dirname, '../..');
   const html = fs.readFileSync(path.join(projectRoot, 'index.html'), 'utf8');
@@ -58,7 +58,7 @@ function createEditor() {
   };
 
   const filename = path.join(projectRoot, 'codex_ide/codex-ide.js');
-  const source = fs.readFileSync(filename, 'utf8');
+  const source = typeof options.source === 'string' ? options.source : fs.readFileSync(filename, 'utf8');
   // Expose the closure only in this VM, without adding test hooks to the app.
   vm.runInContext(source.replace(/\}\)\(\);\s*$/, `
     window.editorUnderTest = {
@@ -96,4 +96,4 @@ function createEditor() {
   };
 }
 
-module.exports = { createEditor };
+module.exports = { createEditor, createElement };

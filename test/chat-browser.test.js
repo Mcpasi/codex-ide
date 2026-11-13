@@ -1,16 +1,11 @@
 'use strict';
 
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
-const { spawnSync } = require('child_process');
-const { pathToFileURL } = require('url');
+const { openChromiumSession, chromium } = require('./helpers/chromium-session');
 
 const root = path.resolve(__dirname, '..');
-const browser = process.env.CODEX_IDE_TEST_BROWSER || String(process.env.PATH || '').split(path.delimiter)
-  .flatMap(directory => ['chromium', 'chromium-browser', 'google-chrome'].map(name => path.join(directory, name)))
-  .find(candidate => fs.existsSync(candidate));
-const browserTest = browser ? test : test.skip;
+const browserTest = chromium ? test : test.skip;
 
 async function checkChat() {
   function assert(condition, message) { if (!condition) throw new Error(message); }
@@ -69,12 +64,23 @@ async function checkChat() {
   assert(prompt.offsetHeight >= 72 && prompt.offsetHeight <= 220, 'The composer must grow within its height bounds');
   const chat = node('ideAnswer');
   for (let index = 0; index < 12; index++) options.onReasoningSummary('Eine längere Arbeitsnotiz. '.repeat(8), { ...scope, itemId: 'extra-' + index });
+  await new Promise(resolve => requestAnimationFrame(resolve));
   chat.scrollTop = 0;
   options.onReasoningSummary('Weitere Information.', { ...scope, itemId: 'extra-12' });
+  await new Promise(resolve => requestAnimationFrame(resolve));
   assert(chat.scrollTop === 0, 'Reading older messages must not be interrupted by new events');
   chat.scrollTop = chat.scrollHeight;
   options.onReasoningSummary('Noch eine Information. '.repeat(20), { ...scope, itemId: 'extra-13' });
+  await new Promise(resolve => requestAnimationFrame(resolve));
   assert(chat.scrollHeight - chat.scrollTop - chat.clientHeight < 3, 'The chat must follow while at the bottom');
+  options.onReasoningSummary('Eine weitere Information.', { ...scope, itemId: 'extra-14' });
+  chat.scrollTop = 0;
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  assert(chat.scrollTop === 0, 'Scrolling up before a pending follow frame must cancel it');
+  assert(node('ideActivity').children[0] === thought && !thought.open, 'Offscreen cards must retain their content and disclosure state');
+  thought.querySelector('summary').click();
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  assert(thought.open && thought.textContent.includes('die Chatausgabe.'), 'Earlier offscreen reasoning must remain readable and expandable');
   node('idePrompt').value = 'Nächste Nachricht als Entwurf';
   options.onToken('', '<codex_ide_final>**Ergebnis:** Die Ausgabe funktioniert.</codex_ide_final>');
   finish('<codex_ide_final>**Ergebnis:** Die Ausgabe funktioniert.</codex_ide_final>');
@@ -101,28 +107,16 @@ function createChatFixture() {
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<link\b[^>]*>/gi, '').replace(/<img\b[^>]*>/gi, '')
     .replace('</head>', () => '<style>' + read('codex_ide/codex-ide.css') + '</style></head>')
     .replace('</body>', () => ['agentResponse.js', 'codex_ide/editor-diff.js', 'codex_ide/syntax-highlighter.js'].map(file => script(read(file))).join('') +
-      script(isolated) + script('(' + checkChat.toString() + ')().then(report => { const result = document.createElement("pre"); result.id = "browser-result"; result.hidden = true; result.textContent = encodeURIComponent(JSON.stringify(report)); document.body.appendChild(result); }).catch(error => { const result = document.createElement("pre"); result.id = "browser-result"; result.textContent = encodeURIComponent(JSON.stringify({ error: error.stack })); document.body.appendChild(result); });') + '</body>');
+      script(isolated) + script('window.chatCheck = (' + checkChat.toString() + ')(); window.chatCheck.catch(() => {});') + '</body>');
 }
 
-browserTest.each([['desktop', 1600, 900], ['mobile', 390, 844]])('renders the complete chat interaction in Chromium: %s', (_name, width, height) => {
-  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-ide-chat-browser-'));
+browserTest.each([['desktop', 1600, 900], ['mobile', 390, 844]])('renders the complete chat interaction in Chromium: %s', async (_name, width, height) => {
+  const browser = await openChromiumSession(createChatFixture(), { width, height, timeoutMs: 15000 });
   try {
-    const fixture = path.join(temporary, 'chat.html');
-    fs.writeFileSync(fixture, createChatFixture());
-    const result = spawnSync(browser, [
-      '--headless', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--disable-background-networking',
-      '--no-first-run', '--no-default-browser-check', '--dump-dom', '--virtual-time-budget=2000', `--window-size=${width},${height}`,
-      `--user-data-dir=${path.join(temporary, 'profile')}`, pathToFileURL(fixture).href
-    ], { encoding: 'utf8', timeout: 15000, maxBuffer: 2 * 1024 * 1024 });
-    if (result.error) throw result.error;
-    expect({ status: result.status, stderr: result.status ? result.stderr : '' }).toEqual({ status: 0, stderr: '' });
-    const match = result.stdout.match(/<pre id="browser-result"[^>]*>([^<]*)<\/pre>/);
-    expect(match).not.toBeNull();
-    const report = JSON.parse(decodeURIComponent(match[1]));
-    expect(report.error).toBeUndefined();
+    const report = await browser.evaluate('window.chatCheck');
     expect(report).toMatchObject({ cards: 3, restored: true });
   } finally {
-    fs.rmSync(temporary, { recursive: true, force: true });
+    await browser.close();
   }
 }, 20000);
 

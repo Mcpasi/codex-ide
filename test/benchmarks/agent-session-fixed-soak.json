@@ -1,0 +1,806 @@
+{
+  "config": {
+    "durationMs": 900000,
+    "cycles": 180,
+    "checkpointCycles": 12,
+    "preloadCycles": 0,
+    "provider": "codex"
+  },
+  "elapsedMs": 900618.5,
+  "cycles": 180,
+  "saves": 180,
+  "aborts": 15,
+  "probeMutations": 0,
+  "activities": 735,
+  "persistedActivities": 735,
+  "restored": true,
+  "checkpoints": [
+    {
+      "elapsedMs": 60002.5,
+      "cycles": 12,
+      "windowCycles": 12,
+      "saves": 12,
+      "aborts": 1,
+      "activities": 49,
+      "domNodes": 1638,
+      "heapBytes": 1825811,
+      "frames": {
+        "samples": 3455,
+        "p50Ms": 16.69999999999709,
+        "p95Ms": 16.799999999999272,
+        "maxMs": 400,
+        "totalMs": 59781,
+        "over50Ms": 15
+      },
+      "activeFrames": {
+        "samples": 48,
+        "p50Ms": 16.700000000004366,
+        "p95Ms": 183.1999999999971,
+        "maxMs": 400,
+        "totalMs": 2316.5999999999985,
+        "over50Ms": 10
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.20000000018626451,
+        "p95Ms": 4.800000000745058,
+        "maxMs": 63.299999999813735,
+        "totalMs": 130.40000000130385,
+        "over50Ms": 1
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 150.90000000037253,
+        "p95Ms": 797.5999999996275,
+        "maxMs": 797.5999999996275,
+        "totalMs": 2723.4000000003725,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 16,
+        "p50Ms": 103,
+        "p95Ms": 437,
+        "maxMs": 437,
+        "totalMs": 2194,
+        "over50Ms": 16
+      },
+      "mutations": 603
+    },
+    {
+      "elapsedMs": 120016.89999999944,
+      "cycles": 24,
+      "windowCycles": 12,
+      "saves": 24,
+      "aborts": 2,
+      "activities": 98,
+      "domNodes": 2199,
+      "heapBytes": 1626713,
+      "frames": {
+        "samples": 3261,
+        "p50Ms": 16.69999999999709,
+        "p95Ms": 16.80000000000291,
+        "maxMs": 383.3000000000029,
+        "totalMs": 60014.3,
+        "over50Ms": 38
+      },
+      "activeFrames": {
+        "samples": 44,
+        "p50Ms": 49.89999999999418,
+        "p95Ms": 183.3000000000029,
+        "maxMs": 283.3999999999942,
+        "totalMs": 3999.9999999999927,
+        "over50Ms": 20
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.2999999998137355,
+        "p95Ms": 1.699999999254942,
+        "maxMs": 12.700000000186265,
+        "totalMs": 60.90000000037253,
+        "over50Ms": 0
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 413.80000000074506,
+        "p95Ms": 579.2999999998137,
+        "maxMs": 579.2999999998137,
+        "totalMs": 5144.800000001676,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 51,
+        "p50Ms": 91,
+        "p95Ms": 200,
+        "maxMs": 243,
+        "totalMs": 5002,
+        "over50Ms": 49
+      },
+      "mutations": 601
+    },
+    {
+      "elapsedMs": 180014.39999999944,
+      "cycles": 36,
+      "windowCycles": 12,
+      "saves": 36,
+      "aborts": 3,
+      "activities": 147,
+      "domNodes": 2760,
+      "heapBytes": 2157684,
+      "frames": {
+        "samples": 3456,
+        "p50Ms": 16.699999999982538,
+        "p95Ms": 16.79999999998836,
+        "maxMs": 216.69999999998254,
+        "totalMs": 59997.600000000006,
+        "over50Ms": 20
+      },
+      "activeFrames": {
+        "samples": 44,
+        "p50Ms": 33.30000000000291,
+        "p95Ms": 150,
+        "maxMs": 200,
+        "totalMs": 2233.300000000032,
+        "over50Ms": 15
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.2999999998137355,
+        "p95Ms": 1.7000000001862645,
+        "maxMs": 13.599999999627471,
+        "totalMs": 65.00000000093132,
+        "over50Ms": 0
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 163.69999999925494,
+        "p95Ms": 425.70000000018626,
+        "maxMs": 425.70000000018626,
+        "totalMs": 2756.39999999851,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 20,
+        "p50Ms": 74,
+        "p95Ms": 200,
+        "maxMs": 200,
+        "totalMs": 1672,
+        "over50Ms": 18
+      },
+      "mutations": 601
+    },
+    {
+      "elapsedMs": 240012,
+      "cycles": 48,
+      "windowCycles": 12,
+      "saves": 48,
+      "aborts": 4,
+      "activities": 196,
+      "domNodes": 3321,
+      "heapBytes": 1949649,
+      "frames": {
+        "samples": 3262,
+        "p50Ms": 16.699999999982538,
+        "p95Ms": 16.79999999998836,
+        "maxMs": 349.8999999999942,
+        "totalMs": 59997.600000000006,
+        "over50Ms": 37
+      },
+      "activeFrames": {
+        "samples": 48,
+        "p50Ms": 50,
+        "p95Ms": 233.29999999998836,
+        "maxMs": 266.70000000001164,
+        "totalMs": 4416.399999999994,
+        "over50Ms": 21
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.20000000018626451,
+        "p95Ms": 1.7000000001862645,
+        "maxMs": 17.40000000037253,
+        "totalMs": 74.6999999973923,
+        "over50Ms": 0
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 413.1000000005588,
+        "p95Ms": 650.4000000003725,
+        "maxMs": 650.4000000003725,
+        "totalMs": 5186.0999999996275,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 48,
+        "p50Ms": 83,
+        "p95Ms": 169,
+        "maxMs": 334,
+        "totalMs": 4832,
+        "over50Ms": 47
+      },
+      "mutations": 601
+    },
+    {
+      "elapsedMs": 300009.2000000002,
+      "cycles": 60,
+      "windowCycles": 12,
+      "saves": 60,
+      "aborts": 5,
+      "activities": 245,
+      "domNodes": 3882,
+      "heapBytes": 2033694,
+      "frames": {
+        "samples": 3427,
+        "p50Ms": 16.699999999982538,
+        "p95Ms": 16.79999999998836,
+        "maxMs": 199.89999999999418,
+        "totalMs": 59997.5,
+        "over50Ms": 22
+      },
+      "activeFrames": {
+        "samples": 47,
+        "p50Ms": 50,
+        "p95Ms": 166.69999999998254,
+        "maxMs": 183.40000000002328,
+        "totalMs": 2649.8000000000175,
+        "over50Ms": 15
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.20000000018626451,
+        "p95Ms": 1.2999999998137355,
+        "maxMs": 13.899999999441206,
+        "totalMs": 59.40000000037253,
+        "over50Ms": 0
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 201.29999999981374,
+        "p95Ms": 476.59999999962747,
+        "maxMs": 476.59999999962747,
+        "totalMs": 3185.9999999981374,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 26,
+        "p50Ms": 79,
+        "p95Ms": 136,
+        "maxMs": 145,
+        "totalMs": 2143,
+        "over50Ms": 24
+      },
+      "mutations": 601
+    },
+    {
+      "elapsedMs": 360006.7999999998,
+      "cycles": 72,
+      "windowCycles": 12,
+      "saves": 72,
+      "aborts": 6,
+      "activities": 294,
+      "domNodes": 4443,
+      "heapBytes": 1754360,
+      "frames": {
+        "samples": 3376,
+        "p50Ms": 16.70000000001164,
+        "p95Ms": 16.79999999998836,
+        "maxMs": 200,
+        "totalMs": 59997.70000000001,
+        "over50Ms": 34
+      },
+      "activeFrames": {
+        "samples": 53,
+        "p50Ms": 50,
+        "p95Ms": 166.70000000001164,
+        "maxMs": 200,
+        "totalMs": 3516.600000000093,
+        "over50Ms": 24
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.20000000018626451,
+        "p95Ms": 1.2999999998137355,
+        "maxMs": 18.600000000558794,
+        "totalMs": 76.89999999850988,
+        "over50Ms": 0
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 412.29999999981374,
+        "p95Ms": 482.1000000005588,
+        "maxMs": 482.1000000005588,
+        "totalMs": 3949.8000000016764,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 37,
+        "p50Ms": 71,
+        "p95Ms": 158,
+        "maxMs": 210,
+        "totalMs": 3023,
+        "over50Ms": 33
+      },
+      "mutations": 601
+    },
+    {
+      "elapsedMs": 420005,
+      "cycles": 84,
+      "windowCycles": 12,
+      "saves": 84,
+      "aborts": 7,
+      "activities": 343,
+      "domNodes": 5004,
+      "heapBytes": 2123416,
+      "frames": {
+        "samples": 3338,
+        "p50Ms": 16.70000000001164,
+        "p95Ms": 16.79999999998836,
+        "maxMs": 266.70000000001164,
+        "totalMs": 59997.59999999998,
+        "over50Ms": 33
+      },
+      "activeFrames": {
+        "samples": 46,
+        "p50Ms": 50,
+        "p95Ms": 166.70000000001164,
+        "maxMs": 266.5999999999767,
+        "totalMs": 3482.899999999907,
+        "over50Ms": 19
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.2999999998137355,
+        "p95Ms": 1.599999999627471,
+        "maxMs": 43.10000000055879,
+        "totalMs": 103.40000000037253,
+        "over50Ms": 0
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 404,
+        "p95Ms": 466,
+        "maxMs": 466,
+        "totalMs": 4153.200000000186,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 41,
+        "p50Ms": 73,
+        "p95Ms": 136,
+        "maxMs": 275,
+        "totalMs": 3565,
+        "over50Ms": 41
+      },
+      "mutations": 601
+    },
+    {
+      "elapsedMs": 480002.5,
+      "cycles": 96,
+      "windowCycles": 12,
+      "saves": 96,
+      "aborts": 8,
+      "activities": 392,
+      "domNodes": 5565,
+      "heapBytes": 1792594,
+      "frames": {
+        "samples": 3421,
+        "p50Ms": 16.70000000001164,
+        "p95Ms": 16.79999999998836,
+        "maxMs": 200,
+        "totalMs": 59997.59999999998,
+        "over50Ms": 25
+      },
+      "activeFrames": {
+        "samples": 50,
+        "p50Ms": 33.399999999965075,
+        "p95Ms": 166.60000000003492,
+        "maxMs": 183.40000000002328,
+        "totalMs": 2716.3000000000466,
+        "over50Ms": 15
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.2999999998137355,
+        "p95Ms": 1.6000000005587935,
+        "maxMs": 18.799999999813735,
+        "totalMs": 77.8999999994412,
+        "over50Ms": 0
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 230.8999999994412,
+        "p95Ms": 464.09999999962747,
+        "maxMs": 464.09999999962747,
+        "totalMs": 3223.2999999988824,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 28,
+        "p50Ms": 68,
+        "p95Ms": 135,
+        "maxMs": 136,
+        "totalMs": 2213,
+        "over50Ms": 27
+      },
+      "mutations": 601
+    },
+    {
+      "elapsedMs": 539999.8999999994,
+      "cycles": 108,
+      "windowCycles": 12,
+      "saves": 108,
+      "aborts": 9,
+      "activities": 441,
+      "domNodes": 6126,
+      "heapBytes": 1837258,
+      "frames": {
+        "samples": 3331,
+        "p50Ms": 16.699999999953434,
+        "p95Ms": 16.79999999998836,
+        "maxMs": 250,
+        "totalMs": 59997.5,
+        "over50Ms": 41
+      },
+      "activeFrames": {
+        "samples": 47,
+        "p50Ms": 50.100000000034925,
+        "p95Ms": 183.29999999993015,
+        "maxMs": 250,
+        "totalMs": 3533.3000000000466,
+        "over50Ms": 26
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.2999999998137355,
+        "p95Ms": 1.2000000001862645,
+        "maxMs": 26.199999999254942,
+        "totalMs": 95,
+        "over50Ms": 0
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 430.20000000018626,
+        "p95Ms": 555.4000000003725,
+        "maxMs": 555.4000000003725,
+        "totalMs": 4223.700000002049,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 42,
+        "p50Ms": 72,
+        "p95Ms": 146,
+        "maxMs": 215,
+        "totalMs": 3615,
+        "over50Ms": 42
+      },
+      "mutations": 601
+    },
+    {
+      "elapsedMs": 600014.3999999994,
+      "cycles": 120,
+      "windowCycles": 12,
+      "saves": 120,
+      "aborts": 10,
+      "activities": 490,
+      "domNodes": 6687,
+      "heapBytes": 2195290,
+      "frames": {
+        "samples": 3493,
+        "p50Ms": 16.699999999953434,
+        "p95Ms": 16.79999999993015,
+        "maxMs": 133.39999999990687,
+        "totalMs": 60014.30000000005,
+        "over50Ms": 20
+      },
+      "activeFrames": {
+        "samples": 46,
+        "p50Ms": 49.89999999990687,
+        "p95Ms": 100,
+        "maxMs": 133.39999999990687,
+        "totalMs": 2066.4000000000233,
+        "over50Ms": 15
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.2999999998137355,
+        "p95Ms": 1.300000000745058,
+        "maxMs": 19.90000000037253,
+        "totalMs": 73.00000000093132,
+        "over50Ms": 0
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 177.6000000005588,
+        "p95Ms": 413.20000000018626,
+        "maxMs": 413.20000000018626,
+        "totalMs": 2356.2999999998137,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 13,
+        "p50Ms": 61,
+        "p95Ms": 104,
+        "maxMs": 104,
+        "totalMs": 858,
+        "over50Ms": 11
+      },
+      "mutations": 601
+    },
+    {
+      "elapsedMs": 660012.0999999996,
+      "cycles": 132,
+      "windowCycles": 12,
+      "saves": 132,
+      "aborts": 11,
+      "activities": 539,
+      "domNodes": 7248,
+      "heapBytes": 2042196,
+      "frames": {
+        "samples": 3252,
+        "p50Ms": 16.699999999953434,
+        "p95Ms": 16.800000000046566,
+        "maxMs": 316.5999999999767,
+        "totalMs": 59997.69999999995,
+        "over50Ms": 50
+      },
+      "activeFrames": {
+        "samples": 51,
+        "p50Ms": 66.70000000006985,
+        "p95Ms": 200,
+        "maxMs": 250.09999999997672,
+        "totalMs": 4850.099999999977,
+        "over50Ms": 33
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.30000000074505806,
+        "p95Ms": 1.3999999994412065,
+        "maxMs": 28.199999999254942,
+        "totalMs": 105.09999999869615,
+        "over50Ms": 0
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 451.20000000018626,
+        "p95Ms": 550,
+        "maxMs": 550,
+        "totalMs": 5444.700000001118,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 51,
+        "p50Ms": 84,
+        "p95Ms": 155,
+        "maxMs": 319,
+        "totalMs": 4897,
+        "over50Ms": 51
+      },
+      "mutations": 601
+    },
+    {
+      "elapsedMs": 720009.5,
+      "cycles": 144,
+      "windowCycles": 12,
+      "saves": 144,
+      "aborts": 12,
+      "activities": 588,
+      "domNodes": 7809,
+      "heapBytes": 2264846,
+      "frames": {
+        "samples": 3348,
+        "p50Ms": 16.699999999953434,
+        "p95Ms": 16.79999999993015,
+        "maxMs": 233.30000000004657,
+        "totalMs": 59997.5,
+        "over50Ms": 38
+      },
+      "activeFrames": {
+        "samples": 45,
+        "p50Ms": 50,
+        "p95Ms": 200,
+        "maxMs": 233.30000000004657,
+        "totalMs": 3299.6999999999534,
+        "over50Ms": 22
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.20000000018626451,
+        "p95Ms": 1.7000000001862645,
+        "maxMs": 26,
+        "totalMs": 93.29999999795109,
+        "over50Ms": 0
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 414.70000000018626,
+        "p95Ms": 482.29999999981374,
+        "maxMs": 482.29999999981374,
+        "totalMs": 4090.2000000001863,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 37,
+        "p50Ms": 73,
+        "p95Ms": 162,
+        "maxMs": 171,
+        "totalMs": 3138,
+        "over50Ms": 34
+      },
+      "mutations": 601
+    },
+    {
+      "elapsedMs": 780007,
+      "cycles": 156,
+      "windowCycles": 12,
+      "saves": 156,
+      "aborts": 13,
+      "activities": 637,
+      "domNodes": 8370,
+      "heapBytes": 2081594,
+      "frames": {
+        "samples": 3274,
+        "p50Ms": 16.699999999953434,
+        "p95Ms": 16.79999999993015,
+        "maxMs": 283.29999999993015,
+        "totalMs": 59997.59999999998,
+        "over50Ms": 50
+      },
+      "activeFrames": {
+        "samples": 53,
+        "p50Ms": 66.69999999995343,
+        "p95Ms": 233.30000000004657,
+        "maxMs": 266.5999999999767,
+        "totalMs": 4650.20000000007,
+        "over50Ms": 33
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.2999999998137355,
+        "p95Ms": 1.599999999627471,
+        "maxMs": 40.799999999813735,
+        "totalMs": 129.39999999757856,
+        "over50Ms": 0
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 465.79999999981374,
+        "p95Ms": 559.7000000001863,
+        "maxMs": 559.7000000001863,
+        "totalMs": 5089.5,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 48,
+        "p50Ms": 79,
+        "p95Ms": 185,
+        "maxMs": 210,
+        "totalMs": 4454,
+        "over50Ms": 46
+      },
+      "mutations": 601
+    },
+    {
+      "elapsedMs": 840004.2999999998,
+      "cycles": 168,
+      "windowCycles": 12,
+      "saves": 168,
+      "aborts": 14,
+      "activities": 686,
+      "domNodes": 8931,
+      "heapBytes": 1950626,
+      "frames": {
+        "samples": 3388,
+        "p50Ms": 16.699999999953434,
+        "p95Ms": 16.79999999993015,
+        "maxMs": 300,
+        "totalMs": 59997.60000000009,
+        "over50Ms": 32
+      },
+      "activeFrames": {
+        "samples": 50,
+        "p50Ms": 50,
+        "p95Ms": 200,
+        "maxMs": 300,
+        "totalMs": 3399.6999999997206,
+        "over50Ms": 23
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.2999999998137355,
+        "p95Ms": 1.599999999627471,
+        "maxMs": 37.40000000037253,
+        "totalMs": 127.00000000279397,
+        "over50Ms": 0
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 218.5,
+        "p95Ms": 570.5,
+        "maxMs": 570.5,
+        "totalMs": 3639.399999999441,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 34,
+        "p50Ms": 78,
+        "p95Ms": 159,
+        "maxMs": 255,
+        "totalMs": 2999,
+        "over50Ms": 32
+      },
+      "mutations": 601
+    },
+    {
+      "elapsedMs": 900002.0999999996,
+      "cycles": 180,
+      "windowCycles": 12,
+      "saves": 180,
+      "aborts": 15,
+      "activities": 735,
+      "domNodes": 9492,
+      "heapBytes": 1968468,
+      "frames": {
+        "samples": 3225,
+        "p50Ms": 16.699999999953434,
+        "p95Ms": 16.79999999993015,
+        "maxMs": 283.30000000004657,
+        "totalMs": 59997.69999999995,
+        "over50Ms": 54
+      },
+      "activeFrames": {
+        "samples": 52,
+        "p50Ms": 83.30000000004657,
+        "p95Ms": 216.69999999995343,
+        "maxMs": 283.30000000004657,
+        "totalMs": 5032.90000000014,
+        "over50Ms": 32
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.39999999944120646,
+        "p95Ms": 2.099999999627471,
+        "maxMs": 45.799999999813735,
+        "totalMs": 153.2999999988824,
+        "over50Ms": 0
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 503.6000000005588,
+        "p95Ms": 554.4000000003725,
+        "maxMs": 554.4000000003725,
+        "totalMs": 5902.300000001676,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 59,
+        "p50Ms": 86,
+        "p95Ms": 176,
+        "maxMs": 211,
+        "totalMs": 5703,
+        "over50Ms": 58
+      },
+      "mutations": 601
+    }
+  ],
+  "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+  "browserMetrics": {
+    "LayoutObjects": 18261,
+    "LayoutCount": 2962,
+    "RecalcStyleCount": 3130,
+    "LayoutDuration": 24.904561,
+    "RecalcStyleDuration": 7.350422,
+    "TaskDuration": 134.745858
+  },
+  "recordedAt": "2026-11-13T02:09:34.253Z",
+  "node": "v24.22.2",
+  "sourceSha256": "807e5bb97651207f9a592e1804d873f521c3f15653c33e9f61496493dea7baa4",
+  "stylesSha256": "a70ec565fc7f5fed504c47ad3eedebe32c95a02c01dc1a6205c61f590b26df32",
+  "resources": {
+    "maxRssBytes": 402653184,
+    "minAvailableBytes": 805306368,
+    "peakRssBytes": 277823488,
+    "minimumAvailableBytes": 1387069440,
+    "timeoutMs": 960000
+  },
+  "violations": [],
+  "status": "passed"
+}

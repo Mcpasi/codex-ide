@@ -31,6 +31,13 @@ body[data-ide-console="true"] .prompt-form{border-top-color:rgba(130,233,189,.55
 .session-history-message.assistant{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#160d11}
 .session-history{gap:22px}
 .activity-card{min-width:0;border:1px solid var(--border);border-radius:10px;background:#1c1217;overflow:hidden}
+/* Keep every card accessible while skipping layout/paint of offscreen history.
+   Remember measured heights so disclosure controls and scroll following retain
+   their positions when the reader returns to earlier work. */
+.activity-card{content-visibility:auto;contain-intrinsic-size:auto 90px}
+/* These flex children already have a viewport assigned by their panels. Their
+   growing scroll contents must not invalidate the editor's ancestor layout. */
+.answer,.terminal-output{contain:strict}
 .activity-card>summary{display:flex;align-items:center;gap:9px;padding:10px 12px;cursor:pointer;list-style:none;user-select:none}
 .activity-card>summary::-webkit-details-marker{display:none}
 .activity-card>summary::after{content:'›';color:var(--muted);font-size:20px;transition:transform .15s}

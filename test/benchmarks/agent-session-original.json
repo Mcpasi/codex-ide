@@ -1,0 +1,147 @@
+{
+  "config": {
+    "durationMs": 0,
+    "cycles": 24,
+    "checkpointCycles": 12,
+    "preloadCycles": 0,
+    "provider": "codex"
+  },
+  "elapsedMs": 10049.600000000559,
+  "cycles": 24,
+  "saves": 24,
+  "aborts": 2,
+  "probeMutations": 6,
+  "activities": 98,
+  "persistedActivities": 98,
+  "restored": true,
+  "checkpoints": [
+    {
+      "elapsedMs": 3922.5,
+      "cycles": 12,
+      "windowCycles": 12,
+      "saves": 12,
+      "aborts": 1,
+      "activities": 49,
+      "domNodes": 1635,
+      "heapBytes": 1703978,
+      "frames": {
+        "samples": 63,
+        "p50Ms": 49.90000000000009,
+        "p95Ms": 233.29999999999973,
+        "maxMs": 250,
+        "totalMs": 3799.8,
+        "over50Ms": 25
+      },
+      "activeFrames": {
+        "samples": 51,
+        "p50Ms": 50,
+        "p95Ms": 233.29999999999973,
+        "maxMs": 250,
+        "totalMs": 3416.2,
+        "over50Ms": 21
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 12.399999999441206,
+        "p95Ms": 26.100000000558794,
+        "maxMs": 81.20000000018626,
+        "totalMs": 1245.8000000026077,
+        "over50Ms": 1
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 204.69999999925494,
+        "p95Ms": 255.80000000074506,
+        "maxMs": 255.80000000074506,
+        "totalMs": 2461.600000000559,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 16,
+        "p50Ms": 120,
+        "p95Ms": 216,
+        "maxMs": 216,
+        "totalMs": 2043,
+        "over50Ms": 16
+      },
+      "mutations": 17174
+    },
+    {
+      "elapsedMs": 9737.800000000745,
+      "cycles": 24,
+      "windowCycles": 12,
+      "saves": 24,
+      "aborts": 2,
+      "activities": 98,
+      "domNodes": 2196,
+      "heapBytes": 2068624,
+      "frames": {
+        "samples": 64,
+        "p50Ms": 33.400000000000546,
+        "p95Ms": 383.2999999999993,
+        "maxMs": 400,
+        "totalMs": 5799.8,
+        "over50Ms": 21
+      },
+      "activeFrames": {
+        "samples": 52,
+        "p50Ms": 50,
+        "p95Ms": 383.3000000000002,
+        "maxMs": 400,
+        "totalMs": 5583.199999999999,
+        "over50Ms": 21
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 29.5,
+        "p95Ms": 48.299999999813735,
+        "maxMs": 102.5,
+        "totalMs": 2594.6999999983236,
+        "over50Ms": 3
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 227.20000000018626,
+        "p95Ms": 262.5,
+        "maxMs": 262.5,
+        "totalMs": 2708.100000000559,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 17,
+        "p50Ms": 272,
+        "p95Ms": 409,
+        "maxMs": 409,
+        "totalMs": 4314,
+        "over50Ms": 16
+      },
+      "mutations": 50806
+    }
+  ],
+  "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+  "browserMetrics": {
+    "LayoutObjects": 7480,
+    "LayoutCount": 817,
+    "RecalcStyleCount": 974,
+    "LayoutDuration": 5.855603,
+    "RecalcStyleDuration": 0.882579,
+    "TaskDuration": 10.227124
+  },
+  "recordedAt": "2026-11-13T01:46:20.569Z",
+  "node": "v24.22.2",
+  "sourceSha256": "fd6b2aa5235bd4e285aa14de0f57a2df140b101b9d98225b097846f994abbbc0",
+  "stylesSha256": "037cb74b6deb46d836d1aee56e7016687fa0a5dc9068ce04ed7cbc59631039ee",
+  "resources": {
+    "maxRssBytes": 402653184,
+    "minAvailableBytes": 805306368,
+    "peakRssBytes": 235044864,
+    "minimumAvailableBytes": 1527214080,
+    "timeoutMs": 90000
+  },
+  "violations": [
+    "An unchanged completed card was mutated 6 times.",
+    "Agent event p95 exceeds 25 ms.",
+    "Activity DOM mutation work grows with history."
+  ],
+  "status": "regression"
+}

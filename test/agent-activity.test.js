@@ -113,4 +113,56 @@ describe('native App Server work summaries', () => {
     expect(editor.state.activities[0].nodes.content.textContent).toBe('<script>evil()</script>');
     expect(editor.state.activities[1].status).toBe('error');
   });
+
+  test('keeps list visibility correct when summaries are cleared and a new turn replaces the activity list', () => {
+    const root = editor.node('ideActivity');
+    editor.appendReasoningSummary('Sichtbar.', scope);
+    const first = root.children[0];
+    editor.appendReasoningSummary('', { ...scope, replace: true, completed: true });
+    expect(first.hidden).toBe(true);
+    expect(root.hidden).toBe(true);
+    editor.updateToolActivity({ itemId: 'read', operation: 'read', status: 'completed' });
+    expect(root.hidden).toBe(false);
+    expect(root.children).toHaveLength(2);
+    editor.state.activities = [];
+    editor.renderActivities();
+    expect(root.hidden).toBe(true);
+    expect(root.children).toHaveLength(0);
+    editor.appendReasoningSummary('Nächster Turn.', scope);
+    expect(root.hidden).toBe(false);
+    expect(root.children).toHaveLength(1);
+    expect(root.children[0]).not.toBe(first);
+    expect(root.textContent).toContain('Nächster Turn.');
+  });
+
+  test('refreshes existing labels and settled statuses without resetting disclosure controls', () => {
+    editor.appendReasoningSummary('Erhaltene Zusammenfassung.', scope);
+    const activity = editor.state.activities[0], card = activity.element;
+    card.open = false;
+    editor.browser.window.CodexIdeLocales = { en: { ui: { agentThoughtTitle: 'Thought', agentActivityStopped: 'Stopped' } } };
+    editor.browser.window.__codexIdeCurrentLanguage = 'en';
+    activity.status = 'stopped';
+    editor.renderActivities();
+    expect(activity.nodes.title.textContent).toBe('Thought');
+    expect(activity.nodes.status.textContent).toBe('Stopped');
+    expect(card.getAttribute('data-state')).toBe('stopped');
+    expect(card.open).toBe(false);
+    expect(activity.nodes.content.textContent).toBe('Erhaltene Zusammenfassung.');
+  });
+
+  test('preserves existing cards when the activity array is copied and retains text after reordering', () => {
+    editor.appendReasoningSummary('Erster Schritt.', scope);
+    editor.appendReasoningSummary('Zweiter Schritt.', { ...scope, itemId: 'second' });
+    const first = editor.state.activities[0].element;
+    first.open = false;
+    editor.state.activities = editor.state.activities.slice();
+    editor.renderActivities();
+    expect(editor.state.activities[0].element).toBe(first);
+    expect(first.open).toBe(false);
+    editor.state.activities.reverse();
+    editor.renderActivities();
+    expect(editor.node('ideActivity').children.map(card => card.textContent)).toEqual([
+      expect.stringContaining('Zweiter Schritt.'), expect.stringContaining('Erster Schritt.')
+    ]);
+  });
 });

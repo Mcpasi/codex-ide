@@ -66,7 +66,7 @@ describe('long live-editor session budgets', () => {
     expect(peakTimers).toBeLessThanOrEqual(2);
     expect(Math.max(...windows)).toBeLessThan(5000);
     expect(windows.at(-1)).toBeLessThan(windows[0] * 4 + 250);
-  });
+  }, 30000);
 
   test('coalesces update bursts and avoids retokenizing an unchanged syntax layer', async () => {
     const editor = createEditor();

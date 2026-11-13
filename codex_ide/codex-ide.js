@@ -16,7 +16,12 @@
   var editorDiff = typeof module === 'object' && module.exports
     ? require('./editor-diff') : window.CodexIdeEditorDiff;
   var renderedActivities = [];
+  var renderedActivitySource = null;
+  var renderedActivityRoot = null;
+  var visibleActivityCount = 0;
+  var activityChatFollow = null;
   var editorHighlightSnapshot = null;
+  var editorCaretMeasurement = null;
   var CODEX_REASONING_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'];
 
   var state = {
@@ -664,8 +669,8 @@
   }
   function setEditorStatus(message, kind) {
     var el = byId('ideEditorStatus');
-    el.textContent = message || '';
-    el.className = kind || '';
+    if (el.textContent !== (message || '')) el.textContent = message || '';
+    if (el.className !== (kind || '')) el.className = kind || '';
   }
   function setTerminalStatus(message, kind) {
     var el = byId('ideTerminalStatus');
@@ -1179,39 +1184,70 @@
       height: lineHeight
     };
     var doc = editor.ownerDocument || (typeof document !== 'undefined' ? document : null);
-    if (!computed || !doc || !doc.body || typeof doc.createElement !== 'function') return geometry;
-    var host = doc.createElement('div');
-    var mirror = doc.createElement('div');
-    var caret = doc.createElement('span');
-    if (typeof caret.getBoundingClientRect !== 'function') return geometry;
+    if (!computed || !doc || !doc.body || typeof doc.createElement !== 'function' || typeof doc.createTextNode !== 'function') return geometry;
     // Unwrapped textarea rows have a fixed line height. Shape only the active
     // row: mirroring the entire prefix lays out thousands of unchanged rows
     // twice per keystroke and allocates their text/line boxes on every frame.
     // A clipped zero-size host cannot alter the page's scrollable dimensions.
-    host.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;overflow:hidden;visibility:hidden;pointer-events:none';
-    mirror.style.cssText = 'position:relative;width:max-content;white-space:pre;border:0;margin:0';
-    ['fontFamily', 'fontSize', 'fontStyle', 'fontWeight', 'fontStretch', 'fontVariant',
+    var measurement = editorCaretMeasurement;
+    if (!measurement || measurement.document !== doc || measurement.host.parentNode !== doc.body) {
+      if (measurement) {
+        measurement.host.remove();
+        if (measurement.fonts && typeof measurement.fonts.removeEventListener === 'function') {
+          measurement.fonts.removeEventListener('loadingdone', measurement.invalidate);
+          measurement.fonts.removeEventListener('loadingerror', measurement.invalidate);
+        }
+      }
+      var host = doc.createElement('div');
+      var mirror = doc.createElement('div');
+      var caret = doc.createElement('span');
+      if (typeof caret.getBoundingClientRect !== 'function') return geometry;
+      host.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;contain:strict;overflow:hidden;visibility:hidden;pointer-events:none';
+      mirror.style.cssText = 'position:relative;width:max-content;white-space:pre;border:0;margin:0';
+      var text = doc.createTextNode('');
+      caret.textContent = '\u200b';
+      mirror.appendChild(text);
+      mirror.appendChild(caret);
+      host.appendChild(mirror);
+      doc.body.appendChild(host);
+      measurement = { document: doc, host: host, mirror: mirror, caret: caret, text: text, fonts: doc.fonts, measured: null };
+      measurement.invalidate = function () { measurement.measured = null; };
+      if (measurement.fonts && typeof measurement.fonts.addEventListener === 'function') {
+        measurement.fonts.addEventListener('loadingdone', measurement.invalidate);
+        measurement.fonts.addEventListener('loadingerror', measurement.invalidate);
+      }
+      editorCaretMeasurement = measurement;
+    }
+    var properties = ['fontFamily', 'fontSize', 'fontStyle', 'fontWeight', 'fontStretch', 'fontVariant',
       'fontFeatureSettings', 'fontVariationSettings', 'lineHeight', 'letterSpacing', 'wordSpacing',
       'tabSize', 'textIndent', 'textTransform', 'direction', 'paddingTop', 'paddingRight',
-      'paddingBottom', 'paddingLeft'].forEach(function (property) {
-      mirror.style[property] = computed[property];
-    });
-    if (lineIndex > 0) mirror.style.textIndent = '0px';
-    mirror.textContent = lineText;
-    caret.textContent = '\u200b';
-    mirror.appendChild(caret);
-    host.appendChild(mirror);
-    doc.body.appendChild(host);
-    try {
-      var origin = mirror.getBoundingClientRect();
-      var position = caret.getBoundingClientRect();
+      'paddingBottom', 'paddingLeft'];
+    // Read computed styles before changing the connected mirror, avoiding a
+    // style/layout flush between every copied font property.
+    var values = properties.map(function (property) { return computed[property]; });
+    var signature = values.join('\u0001') + (lineIndex > 0 ? '\u0001continuation' : '\u0001first');
+    if (measurement.signature !== signature) {
+      properties.forEach(function (property, index) { measurement.mirror.style[property] = values[index]; });
+      if (lineIndex > 0) measurement.mirror.style.textIndent = '0px';
+      measurement.signature = signature;
+      measurement.measured = null;
+    }
+    if (measurement.rowText !== lineText) {
+      measurement.text.data = lineText;
+      measurement.rowText = lineText;
+      measurement.measured = null;
+    }
+    if (!measurement.measured) {
+      var origin = measurement.mirror.getBoundingClientRect();
+      var position = measurement.caret.getBoundingClientRect();
       if (position.height > 0) {
-        geometry.top = lineIndex * lineHeight + position.top - origin.top;
-        geometry.left = position.left - origin.left;
-        geometry.height = Math.max(lineHeight, position.height);
+        measurement.measured = { top: position.top - origin.top, left: position.left - origin.left, height: Math.max(lineHeight, position.height) };
       }
-    } finally {
-      host.remove();
+    }
+    if (measurement.measured) {
+      geometry.top = lineIndex * lineHeight + measurement.measured.top;
+      geometry.left = measurement.measured.left;
+      geometry.height = measurement.measured.height;
     }
     return geometry;
   }
@@ -1297,8 +1333,10 @@
       editorHighlightSnapshot = { content: content, path: path, code: code,
         highlighter: highlighter, highlight: highlight, language: result.language, label: result.label };
     }
-    surface.setAttribute('data-language', result.language);
-    byId('ideSyntaxMode').textContent = format('ideSyntaxMode', 'Syntax: {language}', { language: result.label });
+    if (surface.getAttribute('data-language') !== result.language) surface.setAttribute('data-language', result.language);
+    var syntaxMode = byId('ideSyntaxMode');
+    var syntaxLabel = format('ideSyntaxMode', 'Syntax: {language}', { language: result.label });
+    if (syntaxMode.textContent !== syntaxLabel) syntaxMode.textContent = syntaxLabel;
     if (state.liveEditorRangePending) {
       var range = state.liveEditorRangePending;
       state.liveEditorRangePending = null;
@@ -2244,47 +2282,97 @@
     element.appendChild(body);
     activity.element = element;
     activity.nodes = { title: title, target: target, status: status, source: source, content: content, error: error };
+    activity.renderedText = null;
   }
   function updateActivityElement(activity) {
     var data = activity.run || activity;
     var nodes = activity.nodes;
-    activity.element.setAttribute('data-state', activity.status || 'idle');
-    activity.element.hidden = activity.type === 'reasoning' && !activity.text;
-    nodes.title.textContent = activityTitle(activity);
-    nodes.target.textContent = data.target || '';
-    nodes.target.hidden = !data.target;
-    nodes.status.textContent = activityStatusText(activity.status);
-    nodes.source.textContent = activity.source === 'app-server' || data.source === 'app-server'
-      ? 'App Server' : activity.source === 'editor' ? t('ideEditorTitle', 'Editor') : translatedSkillName(data.id || '');
+    var status = activity.status || 'idle';
+    if (activity.element.getAttribute('data-state') !== status) activity.element.setAttribute('data-state', status);
+    setActivityHidden(activity.element, activity.type === 'reasoning' && !activity.text);
+    setActivityText(nodes.title, activityTitle(activity));
+    setActivityText(nodes.target, data.target || '');
+    setActivityHidden(nodes.target, !data.target);
+    setActivityText(nodes.status, activityStatusText(activity.status));
+    setActivityText(nodes.source, activity.source === 'app-server' || data.source === 'app-server'
+      ? 'App Server' : activity.source === 'editor' ? t('ideEditorTitle', 'Editor') : translatedSkillName(data.id || ''));
     var text = activity.type === 'skill' ? skillStatus(data) : activity.output || activity.text || '';
     if (activity.renderedText !== text) {
       if (activity.type === 'reasoning') renderModelText(nodes.content, text);
       else nodes.content.textContent = text;
       activity.renderedText = text;
     }
-    nodes.content.hidden = !text;
-    nodes.error.textContent = data.error || '';
-    nodes.error.hidden = !data.error;
+    setActivityHidden(nodes.content, !text);
+    setActivityText(nodes.error, data.error || '');
+    setActivityHidden(nodes.error, !data.error);
   }
-  function renderActivities() {
+  function setActivityText(node, text) {
+    if (node.textContent !== text) node.textContent = text;
+  }
+  function setActivityHidden(node, hidden) {
+    if (node.hidden !== hidden) node.hidden = hidden;
+  }
+  function scheduleActivityChatFollow() {
+    if (activityChatFollow) return;
+    var root = byId('ideAnswer');
+    if (!root) return;
+    var pending = { root: root, follow: chatShouldFollow(), top: root.scrollTop, turnId: state.turnId };
+    activityChatFollow = pending;
+    pending.frame = window.requestAnimationFrame(function () {
+      if (activityChatFollow !== pending) return;
+      activityChatFollow = null;
+      // A reader scrolling upwards before the paint cancels the pending follow.
+      if (pending.turnId === state.turnId && pending.follow && root.scrollTop >= pending.top - 1) followChat(true);
+    });
+  }
+  function renderActivities(changedActivity) {
     var root = byId('ideActivity');
     if (!root) return;
-    var follow = chatShouldFollow();
+    // Read scroll geometry once per display frame, before the first mutation.
+    // Reading it around every streamed event repeatedly flushed the full chat
+    // layout, even after old cards stopped being rewritten.
+    var deferredFollow = changedActivity && typeof window.requestAnimationFrame === 'function';
+    if (deferredFollow) scheduleActivityChatFollow();
+    else if (activityChatFollow) {
+      if (typeof window.cancelAnimationFrame === 'function') window.cancelAnimationFrame(activityChatFollow.frame);
+      activityChatFollow = null;
+    }
+    var follow = !deferredFollow && chatShouldFollow();
     var activities = state.activities || [];
-    if (renderedActivities.some(function (activity, index) { return activities[index] !== activity; })) {
+    var sourceChanged = renderedActivitySource !== activities;
+    var reset = renderedActivityRoot !== root || renderedActivities.length > activities.length ||
+      ((!changedActivity || sourceChanged) && renderedActivities.some(function (activity, index) {
+        return activities[index] !== activity;
+      }));
+    renderedActivitySource = activities;
+    if (reset) {
       root.textContent = '';
       renderedActivities = [];
+      visibleActivityCount = 0;
+      renderedActivityRoot = root;
     }
-    activities.forEach(function (activity, index) {
-      if (!renderedActivities[index]) {
+    function update(activity) {
+      var wasVisible = activity.element && !activity.element.hidden;
+      updateActivityElement(activity);
+      visibleActivityCount += Number(!activity.element.hidden) - Number(!!wasVisible);
+    }
+    var mounted = changedActivity && changedActivity.element && changedActivity.element.parentNode === root;
+    // Model events change a single card. Visiting and rewriting every old card
+    // here forced a full chat layout per token and made long turns quadratic.
+    // Full refreshes still handle translations and final/stop state changes.
+    for (var index = changedActivity && !reset ? renderedActivities.length : 0; index < activities.length; index += 1) {
+      var activity = activities[index];
+      if (index >= renderedActivities.length) {
         createActivityElement(activity);
+        activity.element.hidden = true;
         root.appendChild(activity.element);
         renderedActivities.push(activity);
       }
-      updateActivityElement(activity);
-    });
-    root.hidden = !activities.some(function (activity) { return !activity.element.hidden; });
-    followChat(follow);
+      update(activity);
+    }
+    if (changedActivity && !reset && mounted) update(changedActivity);
+    setActivityHidden(root, visibleActivityCount === 0);
+    if (!deferredFollow) followChat(follow);
   }
 
   function appendReasoningSummary(delta, detail, protectedPaths) {
@@ -2300,7 +2388,7 @@
     activity.rawText = (scope.replace === true ? '' : activity.rawText) + delta;
     activity.text = window.CodexIdeAgentResponse.sanitize(activity.rawText, protectedPaths);
     if (scope.completed === true) activity.status = 'complete';
-    renderActivities();
+    renderActivities(activity);
   }
 
   function skillActivityState(status) {
@@ -2340,7 +2428,7 @@
     if (detail && Number.isFinite(Number(detail.resultCount))) run.resultCount = Math.max(0, Math.round(Number(detail.resultCount)));
     var addedActivity = state.activities.find(function (item) { return item.type === 'skill' && item.run === run; });
     if (addedActivity) addedActivity.status = skillActivityState(status);
-    renderActivities();
+    renderActivities(addedActivity);
   }
 
   function updateToolActivity(event) {
@@ -2359,7 +2447,7 @@
     var status = event.status;
     activity.status = /^(completed|complete|success)$/.test(status) ? 'complete'
       : /^(failed|error)$/.test(status) ? 'error' : /^(cancelled|declined|stopped)$/.test(status) ? 'stopped' : 'running';
-    renderActivities();
+    renderActivities(activity);
   }
 
   function settleActivities(status) {
@@ -2645,7 +2733,7 @@
     }
     state.savedContent = draft.targetSavedContent;
     state.dirty = true;
-    byId('idePath').value = draft.path;
+    if (byId('idePath').value !== draft.path) byId('idePath').value = draft.path;
     updateEditorValue(content);
     state.buffers[draft.path] = {
       path: draft.path,

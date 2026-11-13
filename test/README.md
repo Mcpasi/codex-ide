@@ -22,6 +22,7 @@ npm test -- test/workspace.test.js
 npm test -- --testNamePattern="symlink"
 npm run test:coverage
 npm run test:performance
+npm run test:performance:agent -- --output /tmp/codex-ide-agent.json
 ```
 
 Der Coverage-Bericht liegt anschließend unter `coverage/`. Die Browsermodule
@@ -35,6 +36,9 @@ standardmäßigen Jest-Instrumentierung nicht als Coverage erfasst.
 | `performance.test.js` | Streaming-Skalierung, stark fragmentiertes SSE, Planer-/Editor-Übergabe, persistenter App Server, erste sichtbare Änderung und Speichern ohne Workspace-Rundreise; Messwerte und Budgets in [PERFORMANCE.md](PERFORMANCE.md) |
 | `performance-editor.test.js` | 120 Änderungen einer großen Datei, Streaming-Schübe und 30 Abbrüche ohne wachsende Timer/Puffer; 5.000 unveränderte Aktualisierungen ohne erneute Tokenisierung |
 | `performance-editor-browser.test.js` | Echter Chromium-Dauerlauf mit 100 Speicherungen und 20 Abbrüchen, Heap nach GC, DOM-/Pufferbestände und Callback-Zeiten; vollständige Unicode-Schreib-/Löschanimation und Syntax-Äquivalenz für alle sieben unterstützten Sprachen |
+| `performance-agent-activity.test.js` | 512 vollständig erhaltene Werkzeugaktivitäten; begrenzte Aktualisierungsarbeit unabhängig von der Länge des Agent-Verlaufs, ohne Browser |
+| `performance-agent-session-browser.test.js` | Opt-in: vollständiger Agent-Turn mit nativen Frames, wachsenden Denkschritten und Werkzeugkarten, sichtbaren Speicherungen, verworfenen Entwürfen, Konsole und Speicher-Roundtrip; geschützter Einzelbrowser |
+| `benchmark-resources.test.js`, `chromium-session.test.js` | Prozessbaum-RSS, exklusiver Browserstart und Ressourcen-/Zeitabbruch mit vollständiger Prozessbereinigung; Tests verwenden simuliertes Chromium |
 | `workspace-access.test.js` | Modell-Home-Reads, Live-Editor-Persistenz, interne Symlinks, Binaer-Reads, isolierte Pruefkonsole und grosse/tiefe Workspaces |
 | `workspace-buffers.test.js` | Aktualisierung sauberer Puffer nach nativen Aenderungen und Erhalt ungespeicherter Eingaben |
 | `workspace.test.js` | Lesen, Schreiben, Editieren, Verzeichnislisten, Pfadschutz, geschützte Dateien, Symlinks und PDF-Bytes |
@@ -94,6 +98,12 @@ CODEX_IDE_TEST_BROWSER=/usr/bin/chromium npm run test:performance
 Ein ungültiger expliziter Browserpfad lässt den Test fehlschlagen. Die Tests
 verwenden keine echte Modellanmeldung und prüfen keine echten Modellantworten
 oder plattformspezifischen Sandbox-/PTY-Prozesse.
+
+Der neue native Agent-Benchmark läuft ausdrücklich separat und mit Ressourcen-
+schutz. `npm run test:performance:agent` startet einen schonenden Ein-Minuten-Lauf;
+`npm run test:performance:agent:soak` einen echten 15-Minuten-Lauf mit 180 Änderungen.
+Nur einen Lauf gleichzeitig ausführen. Details, Speichergrenzen und Interpretation
+der Frame-Messungen stehen in [PERFORMANCE.md](PERFORMANCE.md).
 
 Der bestehende Release-Check bindet die Tests ein:
 

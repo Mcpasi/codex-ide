@@ -4,19 +4,178 @@
 npm run test:performance
 ```
 
-Der Befehl führt zwölf Regressionstests aus und gibt die Messwerte als JSON aus.
+Der Befehl führt die Performance-Regressionstests aus und gibt die Messwerte als JSON aus.
 Dieselben Tests laufen mit `npm test` und damit auch im Release-Check. Für
 Messwerte bei einem normalen Testlauf kann `CODEX_IDE_PERF_REPORT=1` gesetzt
 werden. Es sind keine Anmeldung, Modellaufrufe oder externen Dienste nötig.
 
-Zwei Tests verwenden echten Headless-Chromium mit dem HTML, CSS und
+Die bestehenden Browsertests verwenden echten Headless-Chromium mit dem HTML, CSS und
 Syntaxrenderer der Anwendung. Sie werden ohne installierten Browser
-übersprungen; die übrigen zehn Tests laufen weiterhin. Einen Browserlauf
+übersprungen; die Tests ohne Browser laufen weiterhin. Einen Browserlauf
 verbindlich machen (ein ungültiger expliziter Pfad schlägt fehl):
 
 ```bash
 CODEX_IDE_TEST_BROWSER=/usr/bin/chromium npm run test:performance
 ```
+
+## Wachsender Agent-Verlauf und native Browserframes
+
+Die bisherigen beschleunigten Editor-Dauertests rufen einzelne Editorfunktionen
+auf. Sie enthalten keinen wachsenden Verlauf eines vollständigen Agent-Turns.
+`performance-agent-activity.test.js` ergänzt deshalb 512 Werkzeugaktivitäten
+mit jeweils Start und Abschluss. Alle Ergebnisse bleiben vorhanden. Die
+Attributänderungen werden in vier gleich großen Fenstern gezählt: Die Arbeit
+an den Karten darf mit dem bisherigen Verlauf nicht zunehmen. Dieser kleine
+Test läuft automatisch und startet keinen Browser.
+
+Mit `CODEX_IDE_PERF_REPORT=1` berichtet dieser Test zusätzlich die Laufzeit pro
+Fenster. `CODEX_IDE_PERF_EDITOR_SOURCE=/pfad/vorher.js` lädt eine zuvor gesicherte
+Editorquelle in dieselbe Node-Fixture, um den Regressionstest ohne Browserlast
+gegen den ursprünglichen Code zu prüfen. Ein fehlschlagendes Budget ist beim
+Vorherlauf beabsichtigt; für den korrigierten Stand die Variable weglassen.
+
+Der zusätzliche Browser-Benchmark durchläuft `runAgent` und dessen echte
+Callbacks: mehrteilige Denkschritte, Skills, Werkzeuge, sichtbare Änderungen an
+einer JavaScript-Datei mit Unicode, Prüfungsausgaben sowie verworfene Entwürfe.
+Er speichert jede Änderung erst nach Syntax- und Präsentationsframe, prüft die
+Editor-Workspace-Rechte und stellt am Ende alle Karten aus dem Sitzungsspeicher
+wieder her. Nur Modellantworten und Datei-Endpunkt sind simuliert; es werden
+keine Modelle, Anmeldedaten oder Projektdateien verwendet.
+
+Ein schonender Standardlauf dauert eine Minute und enthält 24 Änderungen:
+
+```bash
+npm run test:performance:agent -- --output /tmp/codex-ide-agent.json
+```
+
+Der Langzeitlauf dauert echte 15 Minuten. Er enthält 180 Änderungen im Abstand
+von fünf Sekunden, 15 Entwurfsabbrüche und 735 vollständig erhaltene Karten.
+Messfenster werden nach jeweils zwölf Änderungen abgeschlossen:
+
+```bash
+npm run test:performance:agent:soak -- --output /tmp/codex-ide-agent-soak.json
+```
+
+Diese Läufe seriell ausführen, ohne weitere Browsertests parallel zu starten.
+Der Runner erlaubt nur einen eigenen Browser-Benchmark gleichzeitig. Er senkt
+die Prozesspriorität, begrenzt den Renderer-Heap auf 96 MiB und den Node-Heap
+auf 128 MiB. Unter Linux überwacht er alle 500 ms den gesamten Browserprozessbaum:
+über 384 MiB summiertem RSS oder unter 768 MiB verfügbarem Systemspeicher wird
+der Lauf abgebrochen. Auf anderen Plattformen wird der verfügbare Systemspeicher
+überwacht; die Prozessbaum-RSS-Messung ist Linux-spezifisch. Zeitlimit, Signal-
+und Fehlerpfade beenden die eigene Prozessgruppe einschließlich Renderer und
+Hilfsprozessen. Ein Ressourcenabbruch ist kein bestandener Performance-Test;
+der Bericht enthält `status: "aborted"` und der Prozess endet mit Fehlerstatus.
+Diese Grenzen betreffen ausschließlich die Testfixture und beschränken keine
+Produktfunktion oder Historie der Anwendung.
+
+`performance-agent-session-browser.test.js` ist ausdrücklich opt-in, damit ein
+normaler Testlauf keinen zusätzlichen nativen Dauerlauf startet:
+
+```bash
+CODEX_IDE_AGENT_BROWSER_BENCHMARK=1 npm test -- test/performance-agent-session-browser.test.js
+```
+
+Der Bericht enthält native `requestAnimationFrame`-Abstände, gesonderte
+Frame-Abstände während aktiver Editorarbeit, Callback-Zeiten, sichtbare
+Bearbeitungsdauer, Long Tasks, DOM-Mutationen, Heap, Prozessbaum-RSS und
+verfügbaren Systemspeicher. Die gesonderten aktiven Frames verhindern, dass
+Wartepausen zwischen Aktionen stockende Bearbeitung verdecken. Es gibt keine
+beschleunigte Uhr und keine erzwungene GC. Das sind Headless-Browsermessungen,
+keine Messung der physischen Bildschirm-Bildrate. SHA-256 von Editor-JavaScript
+und CSS sowie Node-/Browserversion machen den verwendeten Stand überprüfbar.
+
+Budgets: unveränderte abgeschlossene Karten bleiben unberührt; maximal 180
+DOM-Mutationen je Aktion in jedem Fenster; letzte p95-Ereigniszeit unter 25 ms
+und höchstens `3 × erste p95 + 5 ms`; letzte p95-Framezeit höchstens
+`max(50 ms, 2 × erste p95)`, aktive Frames höchstens
+`max(75 ms, 2 × erste aktive p95)`; letzte p95-Bearbeitungszeit höchstens
+`2 × erste p95 + 100 ms`. Ressourcenlimits und vollständige Inhalte werden
+zusätzlich geprüft. Unterschiede der bewussten Tippanimation werden dadurch
+nicht als reine CPU-Zeit ausgegeben.
+
+Für einen Vorhervergleich lassen sich zuvor gesicherte, unveränderte Quellen
+über `--source /pfad/codex-ide.js --styles /pfad/codex-ide.css` an dieselbe
+Fixture übergeben. Alle übrigen Parameter müssen dabei identisch bleiben.
+
+Ein großer Verlauf lässt sich außerdem vorladen, ohne hunderte Editoranimationen
+abzuspielen. So beginnt die kurze Reproduktion bereits mit 686 abgeschlossenen
+Karten und prüft anschließend 24 echte sichtbare Änderungen, zwei verworfene
+Entwürfe und die Wiederherstellung aller 784 Karten:
+
+```bash
+npm run test:performance:agent -- --duration-ms 0 --cycles 24 --checkpoint-cycles 12 --preload-cycles 168 --output /tmp/codex-ide-agent-late.json
+```
+
+Die vorgeladenen Schritte werden über dieselben Agent-Callbacks angezeigt;
+sie zählen nicht als Editor-Speicherungen. Ihre Aufbaukosten werden aus den
+Messfenstern entfernt. Für vergleichbare Fenster sollten die Intervalle
+Vielfache von zwölf Aktionen sein, damit jedes Fenster dieselbe Zahl von
+Konsolen- und Abbruchfällen enthält. `--cpu-profile /tmp/editor.cpuprofile`
+erlaubt zusätzlich CPU-Sampling; dieses ist auf kurze Läufe bis 60 Sekunden
+begrenzt und verändert die Laufzeit gegenüber einer uninstrumentierten Messung.
+
+Nachgewiesene Ursachen: Jede neue Aktivität aktualisierte alle bisherigen
+Karten erneut. Die Scrollnachführung las vor und nach jedem Stream-Ereignis
+Layoutmaße und erzwang dadurch wiederholt das Layout des wachsenden Chats.
+Jetzt wird nur die betroffene Karte aktualisiert, unveränderte Felder bleiben
+unangetastet und die Nachführung wird pro Frame gebündelt. CSS-Containment
+isoliert die Scrollbereiche vom Editorlayout; offscreen liegende Karten
+behalten ihren Inhalt und werden beim Zurückscrollen wieder dargestellt.
+Sprachwechsel, Abschluss-/Fehlerzustände, manuelles Scrollen, Aufklappen und
+Sitzungswiederherstellung bleiben geprüft.
+
+Die Cursorvermessung hält einen einzigen unsichtbaren, isolierten Messbereich
+mit der aktuellen Zeile. Identischer Text und identische Schriftparameter
+verwenden dieselbe Geometrie; Schrift-, Tab-, Zeilen- und Font-Ladeänderungen
+invalidieren sie. Dadurch entfallen wiederholtes Erzeugen/Entfernen des
+Mess-DOMs und doppelte Layoutmessungen vor und nach demselben Syntaxframe.
+Status-, Pfad- und Syntaxanzeigen werden bei unverändertem Wert ebenfalls nicht
+erneut geschrieben. Die Scrollsuite prüft die echten Glyphpositionen auch
+nach einem Schrift-/Tabwechsel in derselben Sitzung.
+
+## Nachprüfbare Reproduktion vom 13. November 2026
+
+Der ursprüngliche Stand ist `ffc251b48bcecca153ce66ab8b588f6221184db9`.
+Bei identischen 512 Aktivitäten steigen seine Attributänderungen pro Fenster
+mit je 128 Aktivitäten von 16.640 über 49.408 und 82.176 auf 114.944. Der
+korrigierte Stand benötigt viermal genau 384 Änderungen. Alle 512 Ergebnisse
+bleiben erhalten; der Vorherlauf verletzt gezielt das neue Budget.
+Die Messdaten einschließlich CPU-Zeiten stehen in
+[`benchmarks/agent-activity-comparison.json`](benchmarks/agent-activity-comparison.json).
+
+Die kleine native Browser-Reproduktion mit 24 sichtbaren Speicherungen,
+zwei Abbrüchen und 98 erhaltenen Karten wurde ebenfalls gegen beide Stände
+ausgeführt. Der ursprüngliche Code verletzt die Budgets für unveränderte
+Karten, Ereigniszeit und wachsende DOM-Arbeit; der korrigierte Stand besteht.
+Die vollständigen, einschließlich schwankender Framezeiten unveränderten
+Berichte liegen unter
+[`benchmarks/agent-session-original.json`](benchmarks/agent-session-original.json)
+und [`benchmarks/agent-session-fixed-short.json`](benchmarks/agent-session-fixed-short.json).
+Diese Daten sind keine Garantie für eine feste Bildrate: Systemlast und die
+bewusst niedrige Priorität des Testbrowsers beeinflussen die nativen Framezeiten.
+Die funktionalen Prüfungen und DOM-Budgets hängen davon nicht ab.
+
+Der abschließende echte 15-Minuten-Lauf des korrigierten Stands bestand alle
+Budgets: 180 sichtbare Speicherungen, 15 verworfene Entwürfe, 735 vollständig
+erhaltene und aus dem Sitzungsspeicher wiederhergestellte Aktivitäten. Vergleich
+des ersten und letzten gleich großen Fensters mit jeweils zwölf Aktionen:
+
+| Messung | Erstes Fenster | Letztes Fenster |
+| --- | ---: | ---: |
+| p95 Agent-Ereignis | 4,8 ms | 2,1 ms |
+| p95 aktive Editor-Frameabstände | 183,2 ms | 216,7 ms |
+| p95 vollständige sichtbare Bearbeitung | 797,6 ms | 554,4 ms |
+| Aktivitäts-DOM-Mutationen | 603 | 601 |
+| JavaScript-Heap ohne erzwungene GC | 1,83 MB | 1,97 MB |
+
+Der gesamte Browserprozessbaum erreichte maximal 265 MiB RSS; mindestens
+1.323 MiB Systemspeicher blieben verfügbar. Die aktiven Frames schwanken auf
+diesem Rechner deutlich und erlauben keine Aussage über eine feste physische
+Bildrate. Ihre p95 blieb im unveränderten Verhältnisbudget, während die
+Ereignis- und DOM-Arbeit über den wachsenden Verlauf begrenzt blieb. Alle
+15 Fenster, Ressourcenwerte, Quelltext-Hashes und Versionen stehen unverändert
+in [`benchmarks/agent-session-fixed-soak.json`](benchmarks/agent-session-fixed-soak.json).
 
 ## Messungen und Budgets
 

@@ -1,0 +1,143 @@
+{
+  "config": {
+    "durationMs": 0,
+    "cycles": 24,
+    "checkpointCycles": 12,
+    "preloadCycles": 0,
+    "provider": "codex"
+  },
+  "elapsedMs": 13660.199999999255,
+  "cycles": 24,
+  "saves": 24,
+  "aborts": 2,
+  "probeMutations": 0,
+  "activities": 98,
+  "persistedActivities": 98,
+  "restored": true,
+  "checkpoints": [
+    {
+      "elapsedMs": 7191.0999999996275,
+      "cycles": 12,
+      "windowCycles": 12,
+      "saves": 12,
+      "aborts": 1,
+      "activities": 49,
+      "domNodes": 1638,
+      "heapBytes": 3647654,
+      "frames": {
+        "samples": 50,
+        "p50Ms": 133.30000000000018,
+        "p95Ms": 266.7000000000003,
+        "maxMs": 366.60000000000014,
+        "totalMs": 6899.6,
+        "over50Ms": 42
+      },
+      "activeFrames": {
+        "samples": 38,
+        "p50Ms": 133.30000000000018,
+        "p95Ms": 300,
+        "maxMs": 366.60000000000014,
+        "totalMs": 5399.2,
+        "over50Ms": 33
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.5,
+        "p95Ms": 4.2999999998137355,
+        "maxMs": 73.70000000018626,
+        "totalMs": 166.80000000074506,
+        "over50Ms": 1
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 556,
+        "p95Ms": 828.8999999994412,
+        "maxMs": 828.8999999994412,
+        "totalMs": 6548.10000000149,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 61,
+        "p50Ms": 87,
+        "p95Ms": 183,
+        "maxMs": 342,
+        "totalMs": 6431,
+        "over50Ms": 60
+      },
+      "mutations": 603
+    },
+    {
+      "elapsedMs": 13368.299999999814,
+      "cycles": 24,
+      "windowCycles": 12,
+      "saves": 24,
+      "aborts": 2,
+      "activities": 98,
+      "domNodes": 2199,
+      "heapBytes": 2933322,
+      "frames": {
+        "samples": 49,
+        "p50Ms": 133.29999999999927,
+        "p95Ms": 216.6999999999989,
+        "maxMs": 283.3000000000011,
+        "totalMs": 6166.5,
+        "over50Ms": 43
+      },
+      "activeFrames": {
+        "samples": 37,
+        "p50Ms": 116.60000000000036,
+        "p95Ms": 216.70000000000073,
+        "maxMs": 283.3000000000011,
+        "totalMs": 4583.200000000001,
+        "over50Ms": 33
+      },
+      "events": {
+        "samples": 87,
+        "p50Ms": 0.40000000037252903,
+        "p95Ms": 1.7999999998137355,
+        "maxMs": 12.799999999813735,
+        "totalMs": 71.9000000031665,
+        "over50Ms": 0
+      },
+      "edits": {
+        "samples": 12,
+        "p50Ms": 492.40000000037253,
+        "p95Ms": 594.7000000001863,
+        "maxMs": 594.7000000001863,
+        "totalMs": 5704,
+        "over50Ms": 12
+      },
+      "longTasks": {
+        "samples": 52,
+        "p50Ms": 82,
+        "p95Ms": 162,
+        "maxMs": 226,
+        "totalMs": 4853,
+        "over50Ms": 52
+      },
+      "mutations": 601
+    }
+  ],
+  "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+  "browserMetrics": {
+    "LayoutObjects": 5267,
+    "LayoutCount": 409,
+    "RecalcStyleCount": 422,
+    "LayoutDuration": 4.521072,
+    "RecalcStyleDuration": 1.537603,
+    "TaskDuration": 14.173363
+  },
+  "recordedAt": "2026-11-13T01:47:43.901Z",
+  "node": "v24.22.2",
+  "sourceSha256": "807e5bb97651207f9a592e1804d873f521c3f15653c33e9f61496493dea7baa4",
+  "stylesSha256": "a70ec565fc7f5fed504c47ad3eedebe32c95a02c01dc1a6205c61f590b26df32",
+  "resources": {
+    "maxRssBytes": 402653184,
+    "minAvailableBytes": 805306368,
+    "peakRssBytes": 231976960,
+    "minimumAvailableBytes": 1572577280,
+    "timeoutMs": 90000
+  },
+  "violations": [],
+  "status": "passed"
+}

@@ -23,13 +23,15 @@ async function benchmarkEditorSession() {
   const code = document.getElementById('ideHighlightCode');
   const originalHighlight = window.CodexIdeSyntaxHighlighter.highlight;
   window.CodexIdeSyntaxHighlighter.highlight = (...args) => { highlightCalls++; return originalHighlight(...args); };
-  const append = document.body.appendChild;
-  document.body.appendChild = function (node) {
-    // The invisible caret mirror is the only temporary direct body child.
-    const chars = node.textContent.length;
-    mirrorChars += chars;
-    maxMirrorChars = Math.max(maxMirrorChars, chars);
-    return append.call(this, node);
+  const measure = Element.prototype.getBoundingClientRect;
+  Element.prototype.getBoundingClientRect = function (...args) {
+    // Count actual row measurements, including updates to a reused mirror.
+    if (this.parentNode && this.parentNode.parentNode === document.body && this.parentNode.style.visibility === 'hidden') {
+      const chars = this.textContent.length;
+      mirrorChars += chars;
+      maxMirrorChars = Math.max(maxMirrorChars, chars);
+    }
+    return measure.apply(this, args);
   };
   function check(condition, message) { if (!condition) throw new Error(message); }
   function checkPaint() {
@@ -136,8 +138,8 @@ async function benchmarkEditorSession() {
     browser: navigator.userAgent };
 }
 
-browserTest('bounds animation work and retained memory over a long Chromium editor session', () => {
-  const report = runEditorInChromium(benchmarkEditorSession);
+browserTest('bounds animation work and retained memory over a long Chromium editor session', async () => {
+  const report = await runEditorInChromium(benchmarkEditorSession);
   if (process.env.CODEX_IDE_PERF_REPORT === '1' || process.env.npm_lifecycle_event === 'test:performance') {
     console.log(JSON.stringify({ editorPerformance: report }, null, 2));
   }
@@ -204,6 +206,6 @@ async function checkSyntaxUpdates() {
   return { renders, fixtures: cases.length };
 }
 
-browserTest('matches full syntax rendering across multiline edits, language changes and empty buffers', () => {
-  expect(runEditorInChromium(checkSyntaxUpdates)).toEqual({ renders: 35, fixtures: 8 });
+browserTest('matches full syntax rendering across multiline edits, language changes and empty buffers', async () => {
+  expect(await runEditorInChromium(checkSyntaxUpdates)).toEqual({ renders: 35, fixtures: 8 });
 }, 60000);
