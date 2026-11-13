@@ -1994,7 +1994,7 @@ async function runUserWorkspaceTerminal(command, options = {}) {
     inputClosed = true;
     if (result.error) emitOutput(String(result.error.message || result.error) + '\n');
     try { if (child.pid) process.kill(-child.pid, 'SIGTERM'); } catch (_) { /* No background children remain. */ }
-    const exitCode = Number.isFinite(Number(result.code)) ? Number(result.code) : null;
+    const exitCode = typeof result.code === 'number' ? result.code : null;
     const status = stoppedByUser ? 'declined' : exitCode === 0 ? 'completed' : 'failed';
     const output = outputChunks.join('');
     const completedItem = {

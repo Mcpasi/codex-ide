@@ -4,6 +4,7 @@
 
 - Reject malformed and incomplete UTF-8 JSON request bodies with HTTP 400 before parsing or saving, preventing corrupted text from overwriting editor files. Preserve valid Unicode, including literal replacement characters, and cover existing-file overwrites, incomplete request endings and valid saves with HTTP regression tests.
 - Format IPv6 gateway URLs with brackets so startup links, health probes and `codex-ide clean --host 2001:db8::1` use valid HTTP URLs. Preserve already bracketed addresses and existing loopback URLs, with CLI and URL regression coverage.
+- Report failed user-console process starts as failed with a null exit code instead of converting a missing code to zero and claiming success. Cover a real missing-runner (`ENOENT`) failure through the gateway HTTP/SSE route.
 
 ## 1.3.5 - Agent session and editor performance
 
