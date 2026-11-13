@@ -153,6 +153,17 @@ describe('gateway launch configuration', () => {
     expect(gateway.getGatewayUrl('::1', 9000)).toBe('http://localhost:9000/');
   });
 
+  test.each([
+    ['2001:db8::1', 'http://[2001:db8::1]:9000/'],
+    ['[2001:db8::1]', 'http://[2001:db8::1]:9000/'],
+    ['::', 'http://[::]:9000/'],
+    ['example.test', 'http://example.test:9000/']
+  ])('formats a valid gateway URL for %s', (host, expected) => {
+    const url = gateway.getGatewayUrl(host, 9000);
+    expect(url).toBe(expected);
+    expect(new URL(url).href).toBe(expected);
+  });
+
   test.each(['localhost', '127.0.0.1', '127.2.3.4', '::1', '[::1]'])('recognizes loopback: %s', host => {
     expect(gateway.isLoopbackBind(host)).toBe(true);
   });

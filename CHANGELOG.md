@@ -1,8 +1,9 @@
 # Changelog
 
-## 1.3.6 - Gateway request UTF-8 validation
+## 1.3.6 - Gateway UTF-8 validation and IPv6 URLs
 
 - Reject malformed and incomplete UTF-8 JSON request bodies with HTTP 400 before parsing or saving, preventing corrupted text from overwriting editor files. Preserve valid Unicode, including literal replacement characters, and cover existing-file overwrites, incomplete request endings and valid saves with HTTP regression tests.
+- Format IPv6 gateway URLs with brackets so startup links, health probes and `codex-ide clean --host 2001:db8::1` use valid HTTP URLs. Preserve already bracketed addresses and existing loopback URLs, with CLI and URL regression coverage.
 
 ## 1.3.5 - Agent session and editor performance
 

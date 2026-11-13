@@ -28,7 +28,9 @@ function displayHost(host) {
 }
 
 function getGatewayUrl(host, port) {
-  return `http://${displayHost(host)}:${port}/`;
+  const hostname = displayHost(host);
+  const urlHost = hostname.includes(':') && !hostname.startsWith('[') ? `[${hostname}]` : hostname;
+  return `http://${urlHost}:${port}/`;
 }
 
 function isLoopbackBind(host) {
