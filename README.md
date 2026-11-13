@@ -23,6 +23,7 @@ Codex IDE brings your coding agent, editor and project files together in one bro
 
 ## Requirements
 
+- **Memory:** 4 GB RAM minimum; 8–16 GB recommended.
 - **Node.js 18.18.0 or newer**, with npm.
 - A modern browser.
 - For the **Codex** backend: the [official Codex CLI](https://github.com/openai/codex#readme), available as `codex` in your terminal, and a Codex sign-in. The API and local backends do not require the CLI.
@@ -136,7 +137,7 @@ npm ci
 ./codex-ide start
 ```
 
-Run the test suite with `npm test`, check the PWA with `npm run pwa:validate`, or run the performance suite with `npm run test:performance`. See the [test guide](test/README.md) and [performance methodology](test/PERFORMANCE.md).
+Run the test suite with `npm test`, check the PWA with `npm run pwa:validate`, or run the performance suite with `npm run test:performance`. Run the tests on a system with at least 8 GB of RAM. Although their memory usage is limited, systems with less RAM may crash. See the [test guide](test/README.md) and [performance methodology](test/PERFORMANCE.md).
 
 ## License
 
