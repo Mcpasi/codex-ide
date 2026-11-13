@@ -1,0 +1,58 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_soak:
+        description: 'Also run the 15-minute agent browser soak test'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Full test suite
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      # Fail if Chrome is unavailable instead of silently skipping browser tests.
+      CODEX_IDE_TEST_BROWSER: /usr/bin/google-chrome
+      CODEX_IDE_AGENT_BROWSER_BENCHMARK: '1'
+      CODEX_IDE_PERF_REPORT: '1'
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify browser availability
+        run: '"$CODEX_IDE_TEST_BROWSER" --version'
+
+      # Jest already runs serially, so browser benchmarks do not overlap.
+      - name: Check syntax, PWA, all tests and npm package
+        run: npm run verify:release
+
+      - name: Run agent browser soak test
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_soak }}
+        run: npm run test:performance:agent:soak

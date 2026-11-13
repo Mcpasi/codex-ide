@@ -15,6 +15,26 @@ npm test
 `npm test` führt die Suite seriell aus. Auch der bestehende Befehl
 `npm test -- --runInBand` funktioniert weiterhin.
 
+## GitHub Actions
+
+Der Workflow [Tests](../.github/workflows/tests.yml) läuft bei Pushes auf alle
+Branches und bei Pull Requests unabhängig vom Zielbranch. Er verwendet
+Ubuntu 24.04, Node.js 24 und `npm ci`. `npm run verify:release` prüft Syntax,
+PWA, die gesamte Jest-Suite und das npm-Paket. Der Browserpfad wird ausdrücklich
+auf den vorinstallierten Google Chrome gesetzt; auch der sonst optionale
+Agent-Browsertest wird mit `CODEX_IDE_AGENT_BROWSER_BENCHMARK=1` aktiviert.
+Alle Tests laufen seriell.
+
+Sobald die Workflow-Datei im Standardbranch vorhanden ist, lässt sich unter
+**Actions → Tests → Run workflow** auch ein anderer Branch auswählen.
+Mit der Option `run_soak` läuft anschließend zusätzlich der 15-minütige
+Agent-Browser-Dauertest. Das entspricht den
+[GitHub-Vorgaben für manuelle Workflow-Starts](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onworkflow_dispatch).
+Der Workflow benötigt keine Anmeldedaten für Modelle oder CLI-Backends und
+hat ausschließlich lesende Repository-Berechtigungen.
+
+## Einzelne Tests und Berichte
+
 Einzelne Tests oder eine Datei ausführen:
 
 ```bash
